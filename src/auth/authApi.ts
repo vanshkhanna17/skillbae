@@ -1,7 +1,16 @@
-import { config } from "@/config/config";
-import { clearAccessToken, getAccessToken, setAccessToken } from "./tokenStore";
+import { config } from "@/config/config.ts";
+import { clearAccessToken, getAccessToken, setAccessToken } from "./tokenStore.ts";
 
 const baseUrl = config.apiBaseUrl;
+
+export interface RegisterFormInterface {
+  first_name: string;
+  last_name: string;
+  email: string;
+  password: string;
+  profile?: string;
+  experience?: number;
+}
 
 const getHeaders = (authorization: boolean = false) => {
   const authToken = authorization ? getAccessToken() : null;
@@ -29,11 +38,22 @@ const postRequests = async (
   if (!response?.ok) {
     throw new Error(`HTTP error! status: ${response.status}`);
   }
+  if (response.status === 204) return null;
   return await response.json();
 };
 
+export async function registerRequest(payload: RegisterFormInterface) {
+  const data = await postRequests("auth/register", payload, false, false);
+  return data;
+}
+
 export async function loginRequest(username: string, password: string) {
-  const data = await postRequests("auth/login", { username, password }, false, true);
+  const data = await postRequests(
+    "auth/login",
+    { email: username, password: password },
+    false,
+    true,
+  );
   setAccessToken(data?.access_token);
   return data;
 }
@@ -51,6 +71,7 @@ export async function refreshTokenRequest() {
 export async function getUser() {
   let response = await fetch(`${baseUrl}/users/user-details`, {
     method: "GET",
+    credentials: "include",
     headers: {
       ...getHeaders(true),
     },
@@ -60,6 +81,7 @@ export async function getUser() {
       await refreshTokenRequest();
       response = await fetch(`${baseUrl}/users/user-details`, {
         method: "GET",
+        credentials: "include",
         headers: {
           ...getHeaders(true),
         },
@@ -75,6 +97,6 @@ export async function getUser() {
 }
 
 export async function logoutRequest() {
-  await postRequests("auth/logout", undefined, false, true);
+  await postRequests("auth/logout", undefined, true, true);
   clearAccessToken();
 }

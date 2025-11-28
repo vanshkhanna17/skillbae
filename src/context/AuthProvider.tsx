@@ -1,5 +1,5 @@
-import { getUser, loginRequest, logoutRequest, refreshTokenRequest } from "@/auth/authApi";
-import { getAccessToken } from "@/auth/tokenStore";
+import { getUser, loginRequest, logoutRequest, refreshTokenRequest } from "@/auth/authApi.ts";
+import { getAccessToken } from "@/auth/tokenStore.ts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createContext, use, type ReactNode } from "react";
 
@@ -10,7 +10,7 @@ type AuthContextType = {
   logout: () => Promise<void>;
 };
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AuthContext = createContext<AuthContextType>(undefined!);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const queryClient = useQueryClient();

@@ -1,10 +1,16 @@
-import RHFTextField from "@/components/formFields/RHFTextField";
-import { registerSchema, type RegisterSchemaType } from "@/schemas/registerSchema";
+import { registerRequest, type RegisterFormInterface } from "@/auth/authApi.ts";
+import RHFTextField from "@/components/formFields/RHFTextField.tsx";
+import { useAuth } from "@/context/AuthProvider.tsx";
+import { registerSchema, type RegisterSchemaType } from "@/schemas/registerSchema.ts";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Box, Button, Typography } from "@mui/material";
+import { useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
+import { Navigate, useNavigate } from "react-router-dom";
 
 const RegisterForm = () => {
+  const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
   const {
     control,
     handleSubmit,
@@ -14,8 +20,8 @@ const RegisterForm = () => {
     mode: "onChange",
     reValidateMode: "onChange",
     defaultValues: {
-      firstname: "",
-      lastname: "",
+      first_name: "",
+      last_name: "",
       email: "",
       password: "",
       confirmPassword: "",
@@ -23,9 +29,27 @@ const RegisterForm = () => {
       experience: null,
     },
   });
+
+  const registerMutation = useMutation({
+    mutationFn: (data: RegisterFormInterface) => registerRequest(data),
+    onSuccess: () => {
+      navigate("/login", { state: { register: true }, replace: true });
+    },
+    onError: (error) => {
+      console.error("Registration failed:", error);
+    },
+  });
+
   const onSubmit = (data: RegisterSchemaType) => {
-    console.log("register data:", data);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { confirmPassword: _, ...payload } = data;
+    registerMutation.mutateAsync(payload as RegisterFormInterface);
   };
+
+  if (isAuthenticated) {
+    <Navigate to="/" replace />;
+  }
+
   return (
     <>
       <Box
@@ -37,14 +61,14 @@ const RegisterForm = () => {
       >
         <Typography>Register</Typography>
         <RHFTextField
-          name="firstname"
+          name="first_name"
           control={control}
           label="First Name"
           placeholder="John"
           required
         />
         <RHFTextField
-          name="lastname"
+          name="last_name"
           control={control}
           label="Last Name"
           placeholder="Doe"

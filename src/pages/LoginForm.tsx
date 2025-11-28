@@ -1,17 +1,17 @@
-import RHFTextField from "@/components/formFields/RHFTextField";
-import { useAuth } from "@/context/AuthProvider";
-import type { LoginSchemaType } from "@/schemas/loginScema";
-import { loginSchema } from "@/schemas/loginScema";
+import RHFTextField from "@/components/formFields/RHFTextField.tsx";
+import { useAuth } from "@/context/AuthProvider.tsx";
+import { loginSchema, type LoginSchemaType } from "@/schemas/loginScema.ts";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Box, Button, Typography } from "@mui/material";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { Link, Navigate } from "react-router-dom";
+import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 
 const LoginForm = () => {
   const { login, isAuthenticated } = useAuth();
   const [loginError, setLoginError] = useState<string | null>(null);
-  const [redirect, setRedirect] = useState<boolean>(false);
+  const { state } = useLocation();
+  const navigate = useNavigate();
   const {
     handleSubmit,
     control,
@@ -27,13 +27,13 @@ const LoginForm = () => {
     setLoginError(null);
     try {
       await login(data.username, data.password);
-      setRedirect(true);
+      navigate("/", { replace: true });
     } catch (err) {
       setLoginError("Invalid request" + err);
     }
   };
-  if (isAuthenticated || redirect) {
-    <Navigate to="/" replace />;
+  if (isAuthenticated) {
+    return <Navigate to="/" replace />;
   }
   return (
     <Box
@@ -43,6 +43,9 @@ const LoginForm = () => {
       noValidate
       autoComplete="off"
     >
+      {state?.register && (
+        <Typography>Registration Successful. Please login to continue</Typography>
+      )}
       <Typography>Login</Typography>
       <RHFTextField
         control={control}

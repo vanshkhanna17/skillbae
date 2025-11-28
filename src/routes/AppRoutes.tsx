@@ -1,7 +1,7 @@
-import ProtectedRoute from "@/components/ProtectedRoute";
-import General from "@/pages/General";
-import LoginForm from "@/pages/LoginForm";
-import RegisterForm from "@/pages/RegisterForm";
+import ProtectedRoute from "@/components/ProtectedRoute.tsx";
+import General from "@/pages/General.tsx";
+import LoginForm from "@/pages/LoginForm.tsx";
+import RegisterForm from "@/pages/RegisterForm.tsx";
 import { Route, Routes } from "react-router-dom";
 
 const AppRoutes = () => {
