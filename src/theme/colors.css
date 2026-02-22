@@ -1,0 +1,22 @@
+/* CSS variables matching colors.ts */
+:root {
+  /* Primary colors */
+  --color-primary: #2b85d9;
+  --color-primary-light: rgba(43, 133, 217, 0.08);
+  --color-primary-hover: rgba(43, 133, 217, 0.12);
+
+  /* Secondary colors */
+  --color-secondary: #535bf2;
+  --color-secondary-light: rgba(83, 91, 242, 0.08);
+  --color-secondary-hover: rgba(83, 91, 242, 0.12);
+
+  /* Text colors */
+  --color-text-secondary: oklch(54.6% 0.245 262.881);
+  --color-text-primary: oklch(48.8% 0.243 264.376);
+
+  /* Gray scale */
+  --color-gray-50: oklch(98.5% 0.002 247.839);
+  --color-gray-200: #e5e7eb;
+  --color-gray-700: #374151;
+  --color-black: #2e2e2e;
+}

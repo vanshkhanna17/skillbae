@@ -1,7 +1,6 @@
 import ProtectedRoute from "@/components/ProtectedRoute.tsx";
-import General from "@/pages/General.tsx";
-import LoginForm from "@/pages/LoginForm.tsx";
-import RegisterForm from "@/pages/RegisterForm.tsx";
+import HomePage from "@/pages/HomePage.tsx";
+import LoginPage from "@/pages/LoginPage.tsx";
 import { Route, Routes } from "react-router-dom";
 
 const AppRoutes = () => {
@@ -11,12 +10,52 @@ const AppRoutes = () => {
         path="/"
         element={
           <ProtectedRoute>
-            <General />
+            <HomePage />
           </ProtectedRoute>
         }
       />
-      <Route path="/login" element={<LoginForm />} />
-      <Route path="/register" element={<RegisterForm />} />
+      <Route
+        path="/chats"
+        element={
+          <ProtectedRoute>
+            <p>Coming Soon</p>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/notifications"
+        element={
+          <ProtectedRoute>
+            <p>Coming Soon</p>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/create"
+        element={
+          <ProtectedRoute>
+            <p>Coming Soon</p>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/profile"
+        element={
+          <ProtectedRoute>
+            <p>Coming Soon</p>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/settings"
+        element={
+          <ProtectedRoute>
+            <p>Coming Soon</p>
+          </ProtectedRoute>
+        }
+      />
+      <Route path="/login" element={<LoginPage register={false} />} />
+      <Route path="/register" element={<LoginPage register={true} />} />
     </Routes>
   );
 };
