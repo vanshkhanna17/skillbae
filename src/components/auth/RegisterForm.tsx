@@ -1,4 +1,4 @@
-import { registerRequest, type RegisterFormInterface } from "@/auth/authApi.ts";
+import { registerRequest, type RegisterFormInterface } from "@/api/authApi.ts";
 import RHFTextField from "@/components/formFields/RHFTextField.tsx";
 import { useAuth } from "@/context/AuthProvider.tsx";
 import { registerSchema, type RegisterSchemaType } from "@/schemas/registerSchema.ts";

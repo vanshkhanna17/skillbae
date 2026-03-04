@@ -1,7 +1,5 @@
-import { config } from "@/config/config.ts";
-import { clearAccessToken, getAccessToken, setAccessToken } from "./tokenStore.ts";
-
-const baseUrl = config.apiBaseUrl;
+import { baseUrl, getHeaders, postRequests } from "./baseApi.ts";
+import { clearAccessToken, setAccessToken } from "./tokenStore.ts";
 
 export interface RegisterFormInterface {
   first_name: string;
@@ -11,36 +9,6 @@ export interface RegisterFormInterface {
   profile?: string;
   experience?: number;
 }
-
-const getHeaders = (authorization: boolean = false) => {
-  const authToken = authorization ? getAccessToken() : null;
-  return {
-    "Content-Type": "application/json",
-    ...(authToken && { Authorization: `Bearer ${authToken}` }),
-  };
-};
-
-const postRequests = async (
-  url: string,
-  payload?: object,
-  auth: boolean = false,
-  cookies: boolean = false,
-) => {
-  const requestOptions: RequestInit = {
-    method: "POST",
-    credentials: cookies ? "include" : "same-origin",
-    headers: {
-      ...getHeaders(auth),
-    },
-    body: payload ? JSON.stringify(payload) : undefined,
-  };
-  const response = await fetch(`${baseUrl}/${url}`, requestOptions);
-  if (!response?.ok) {
-    throw new Error(`HTTP error! status: ${response.status}`);
-  }
-  if (response.status === 204) return null;
-  return await response.json();
-};
 
 export async function registerRequest(payload: RegisterFormInterface) {
   const data = await postRequests("auth/register", payload, false, false);
@@ -69,7 +37,7 @@ export async function refreshTokenRequest() {
 }
 
 export async function getUser() {
-  let response = await fetch(`${baseUrl}/users/user-details`, {
+  let response = await fetch(`${baseUrl}/users/details`, {
     method: "GET",
     credentials: "include",
     headers: {

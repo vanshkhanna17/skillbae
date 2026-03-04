@@ -17,6 +17,7 @@
   /* Gray scale */
   --color-gray-50: oklch(98.5% 0.002 247.839);
   --color-gray-200: #e5e7eb;
+  --color-gray-500: oklch(55.1% 0.027 264.364);
   --color-gray-700: #374151;
   --color-black: #2e2e2e;
 }

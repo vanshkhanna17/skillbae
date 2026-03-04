@@ -63,6 +63,27 @@ const theme = createTheme({
       // display: "contents",
     },
   },
+  components: {
+    MuiOutlinedInput: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+            borderColor: theme.palette.secondary.main,
+            borderWidth: 2,
+          },
+        }),
+      },
+    },
+    MuiInputLabel: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          "&.Mui-focused": {
+            color: theme.palette.secondary.main,
+          },
+        }),
+      },
+    },
+  },
 });
 
 export default theme;

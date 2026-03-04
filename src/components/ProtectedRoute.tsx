@@ -1,9 +1,9 @@
+import "@/components/nav/navigation-bar.css";
 import { useAuth } from "@/context/AuthProvider.tsx";
 import { Container, Grid } from "@mui/material";
 import type { ReactNode } from "react";
 import { Navigate } from "react-router-dom";
 import NavigationBar from "./nav/NavigationBar.tsx";
-import "@/components/nav/navigation-bar.css";
 
 const ProtectedRoute = ({ children }: { children: ReactNode }) => {
   const { isAuthenticated } = useAuth();

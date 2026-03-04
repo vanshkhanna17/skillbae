@@ -1,5 +1,5 @@
-import { getUser, loginRequest, logoutRequest, refreshTokenRequest } from "@/auth/authApi.ts";
-import { getAccessToken } from "@/auth/tokenStore.ts";
+import { getUser, loginRequest, logoutRequest, refreshTokenRequest } from "@/api/authApi.ts";
+import { getAccessToken } from "@/api/tokenStore.ts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createContext, use, type ReactNode } from "react";
 

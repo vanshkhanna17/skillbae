@@ -1,4 +1,4 @@
-import { Box, Modal, Typography } from "@mui/material";
+import { Box, Modal } from "@mui/material";
 import type { ReactNode } from "react";
 
 interface ModalDialogProps {
@@ -33,12 +33,7 @@ const ModalDialog = ({ handleClose, open, children }: ModalDialogProps) => {
         aria-describedby="modal-modal-description"
         sx={{ bordeRadius: "8px" }}
       >
-        <Box sx={style}>
-          <Typography id="modal-modal-title" variant="h6" component="h2">
-            What would you like to post?
-          </Typography>
-          {children ?? ""}
-        </Box>
+        <Box sx={style}>{children ?? ""}</Box>
       </Modal>
     </div>
   );
