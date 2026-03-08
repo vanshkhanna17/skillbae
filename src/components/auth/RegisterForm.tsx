@@ -1,12 +1,14 @@
-import { registerRequest, type RegisterFormInterface } from "@/auth/authApi.ts";
+import { registerRequest, type RegisterFormInterface } from "@/api/authApi.ts";
 import RHFTextField from "@/components/formFields/RHFTextField.tsx";
 import { useAuth } from "@/context/AuthProvider.tsx";
 import { registerSchema, type RegisterSchemaType } from "@/schemas/registerSchema.ts";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Box, Button, Typography } from "@mui/material";
+import FacebookSharpIcon from "@mui/icons-material/FacebookSharp";
+import GoogleIcon from "@mui/icons-material/Google";
+import { Box, Button, Divider, Grid, Typography } from "@mui/material";
 import { useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
-import { Navigate, useNavigate } from "react-router-dom";
+import { Link, Navigate, useNavigate } from "react-router-dom";
 
 const RegisterForm = () => {
   const { isAuthenticated } = useAuth();
@@ -59,7 +61,10 @@ const RegisterForm = () => {
         noValidate
         autoComplete="off"
       >
-        <Typography>Register</Typography>
+        <Grid container direction="column" spacing={1} sx={{ marginBottom: "32px" }}>
+          <Typography variant="h5">Create Account</Typography>
+          <Typography variant="subtitle1">Sign up to get started with SocialHub</Typography>
+        </Grid>
         <RHFTextField
           name="first_name"
           control={control}
@@ -104,8 +109,25 @@ const RegisterForm = () => {
           placeholder="5.5"
         />
         <Button type="submit" variant="contained" disabled={isSubmitting}>
-          Submit
+          Sing Up
         </Button>
+        <p>
+          Already have an account?&nbsp;&nbsp;
+          <Button component={Link} variant="text" to="/login" sx={{ display: "contents" }}>
+            Sign In
+          </Button>
+        </p>
+        <Divider sx={{ margin: "10px 0px" }}>
+          <Typography variant="body2">Or continue with</Typography>
+        </Divider>
+        <Grid container justifyContent="center" spacing={2}>
+          <Button variant="outlined" sx={{ borderColor: "oklch(87.2% 0.01 258.338)" }}>
+            <GoogleIcon />
+          </Button>
+          <Button variant="outlined" sx={{ borderColor: "oklch(87.2% 0.01 258.338)" }}>
+            <FacebookSharpIcon />
+          </Button>
+        </Grid>
       </Box>
     </>
   );
