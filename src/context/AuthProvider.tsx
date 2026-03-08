@@ -6,6 +6,7 @@ import { createContext, use, type ReactNode } from "react";
 type AuthContextType = {
   user: object | null;
   isAuthenticated: boolean;
+  isLoading: boolean;
   login: (username: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
 };
@@ -16,7 +17,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const queryClient = useQueryClient();
 
   //refresh token query: only runs on initial load
-  useQuery({
+  const refreshQuery = useQuery({
     queryKey: ["auth", "refresh"],
     queryFn: refreshTokenRequest,
     retry: 0,
@@ -51,6 +52,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       value={{
         user: getUserQuery.data ?? null,
         isAuthenticated: !!getUserQuery.data,
+        isLoading: refreshQuery.isLoading || getUserQuery.isLoading,
         login: async (u: string, p: string) =>
           await loginMutation.mutateAsync({ username: u, password: p }),
         logout: async () => await logoutMutation.mutateAsync(),

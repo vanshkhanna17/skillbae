@@ -10,17 +10,12 @@ import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
 import { Box, Button, Grid, Typography } from "@mui/material";
 import { useState } from "react";
 import { NavLink } from "react-router-dom";
-import ModalDialog from "../ModalDialog.tsx";
-import PostTextField from "../formFields/PostTextField.tsx";
+import PostCreate from "../PostCreate.tsx";
 
 const NavigationBar = () => {
-  const [open, setOpen] = useState(false);
-  const handleClose = () => setOpen(false);
-  const [caption, setCaption] = useState<string>("");
   const { logout } = useAuth();
-  const handleSubmit = () => {
-    console.log("Saved HTML:", caption);
-  };
+  const [open, setOpen] = useState(false);
+
   return (
     <>
       <Typography
@@ -76,15 +71,7 @@ const NavigationBar = () => {
           </Button>
         </Box>
       </div>
-      <ModalDialog handleClose={handleClose} open={open}>
-        <Typography id="modal-modal-title" variant="h6" component="h2">
-          What would you like to post?
-        </Typography>
-        <PostTextField value={caption} onChange={setCaption} />
-        <Button variant="contained" onClick={handleSubmit}>
-          Post
-        </Button>
-      </ModalDialog>
+      <PostCreate open={open} setOpen={setOpen} />
     </>
   );
 };

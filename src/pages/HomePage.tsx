@@ -1,4 +1,4 @@
-import { getPosts, getUserCategories } from "@/api/feedApi.ts";
+import { getPosts, getUserCategories, saveUserCategories } from "@/api/feedApi.ts";
 import { getAccessToken } from "@/api/tokenStore.ts";
 import Card from "@/components/Card.tsx";
 import FeedFilter from "@/components/FeedFilter.tsx";
@@ -6,34 +6,89 @@ import ModalDialog from "@/components/ModalDialog.tsx";
 import PostTextField from "@/components/formFields/PostTextField.tsx";
 import ChatBubbleOutlineOutlinedIcon from "@mui/icons-material/ChatBubbleOutlineOutlined";
 import { Avatar, Box, Button, Container, Divider, Skeleton, Typography } from "@mui/material";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { formatDistanceToNow, parseISO } from "date-fns";
 import DOMPurify from "dompurify";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 export interface Post {
-  user?: string;
+  safePost?: string | TrustedHTML;
+  user: {
+    id: number;
+    email: string;
+    first_name: string;
+    last_name: string;
+    created_at: string;
+    avatar_url: string;
+    profile: string;
+    experience: number;
+    full_name: string;
+  };
   username?: string;
-  post?: string;
-  date?: string;
+  content: string;
+  publish_date: string;
+  category: { id: number; category: string };
+  comments?: [];
 }
+
+const SKELETON_COUNT = 4;
+
+const PostSkeleton = () => {
+  return (
+    <Card>
+      <Box sx={{ display: "flex", gap: "var(--size)", alignItems: "center" }}>
+        <Skeleton variant="circular" width={40} height={40} />
+        <Box sx={{ display: "flex", flexDirection: "column" }}>
+          <Skeleton variant="text" height={32} width={105} />
+          <Box sx={{ display: "flex" }}>
+            <Skeleton variant="text" height={24} width={60} />
+            <Box component="span" sx={{ mx: 1, opacity: 0.5 }}>
+              •
+            </Box>{" "}
+            <Skeleton variant="text" height={24} width={60} />
+          </Box>
+        </Box>
+      </Box>
+      <Skeleton variant="rounded" height={200} />
+      <Divider />
+      <Skeleton variant="text" width={64} height={40} />
+    </Card>
+  );
+};
 
 const HomePage = () => {
   const [userCategories, setUserCategories] = useState<number[]>([]);
+  const [open, setOpen] = useState<boolean>(false);
+  const [post, setPost] = useState<Post>();
+  const [caption, setCaption] = useState<string>("");
+  const queryClient = useQueryClient();
+  const isAuthenticated = !!getAccessToken();
+
+  const handleClose = () => setOpen(false);
+
   const getPostsQuery = useQuery({
     queryKey: ["feed", "posts"],
     queryFn: getPosts,
-    enabled: !!getAccessToken(),
-    retry: false,
+    enabled: isAuthenticated,
   });
 
   const getUserCategoriesQuery = useQuery({
     queryKey: ["feed", "user", "categories"],
     queryFn: getUserCategories,
-    enabled: !!getAccessToken(),
-    retry: false,
+    enabled: isAuthenticated,
   });
 
-  console.warn(getUserCategoriesQuery.data);
+  const saveUserCategoriesMutation = useMutation({
+    mutationFn: (data: number[]) => saveUserCategories(data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["feed", "posts"] }),
+  });
+
+  const handleCategoriesChange = (categories: number[]) => {
+    if (JSON.stringify(categories) === JSON.stringify(userCategories)) return;
+
+    setUserCategories(categories);
+    saveUserCategoriesMutation.mutate(categories);
+  };
 
   useEffect(() => {
     if (getUserCategoriesQuery.data) {
@@ -41,55 +96,20 @@ const HomePage = () => {
     }
   }, [getUserCategoriesQuery.data]);
 
-  console.log(userCategories);
+  const postList = useMemo(() => getPostsQuery.data, [getPostsQuery.data]);
 
-  const postList = getPostsQuery.data ?? [
-    {},
-    {
-      user: "Vohn Koe",
-      username: "john21",
-      post: "<p>Need user for following requirements:</p><ul><li><p>React</p></li><li><p>Python</p></li><li><p>SQL</p></li></ul><p></p>",
-      date: "20-01-2026",
-    },
-    {
-      user: "Kohn Poe",
-      username: "john21",
-      post: "<p>Need user for following requirements:</p><ul><li><p>React</p></li><li><p>Python</p></li><li><p>SQL</p></li></ul><p></p>",
-      date: "20-01-2026",
-    },
-    {
-      user: "Tohn Doe",
-      username: "john21",
-      post: "<p>Need user for following requirements:</p><ul><li><p>React</p></li><li><p>Python</p></li><li><p>SQL</p></li></ul><p></p>",
-      date: "20-01-2026",
-    },
-    {
-      user: "Bohn Doe",
-      username: "john21",
-      post: "<p>Need user for following requirements:</p><ul><li><p>React</p></li><li><p>Python</p></li><li><p>SQL</p></li></ul><p></p>",
-      date: "20-01-2026",
-    },
-    {
-      user: "Lohn Koe",
-      username: "john21",
-      post: "<p>Need user for following requirements:</p><ul><li><p>React</p></li><li><p>Python</p></li><li><p>SQL</p></li></ul><p></p>",
-      date: "20-01-2026",
-    },
-    {
-      user: "Rohn Toe",
-      username: "john21",
-      post: "<p>Need user for following requirements:</p><ul><li><p>React</p></li><li><p>Python</p></li><li><p>SQL</p></li></ul><p></p>",
-      date: "20-01-2026",
-    },
-  ];
-  const [open, setOpen] = useState<boolean>(false);
-  const [post, setPost] = useState<Post>();
-  const handleClose = () => setOpen(false);
-  const [caption, setCaption] = useState<string>("");
-  const handleSubmit = () => {
+  const sanitizedPosts = useMemo(() => {
+    return postList.map((p: Post) => ({
+      ...p,
+      safePost: DOMPurify.sanitize(p.content ?? ""),
+    }));
+  }, [postList]);
+
+  const handleCommentSubmit = () => {
     console.log("Saved HTML:", caption);
   };
-  function stringToColor(string: string) {
+
+  const stringToColor = (string: string) => {
     let hash = 0;
     let i;
 
@@ -105,16 +125,23 @@ const HomePage = () => {
     }
 
     return color;
-  }
+  };
 
-  function stringAvatar(name: string) {
+  const stringAvatar = (name: string) => {
+    const parts = name.split(" ");
+
     return {
       sx: {
         bgcolor: stringToColor(name),
       },
-      children: `${name.split(" ")[0][0]}${name.split(" ")[1][0]}`,
+      children: parts.length > 1 ? `${parts[0][0]}${parts[1][0]}` : parts[0][0],
     };
+  };
+
+  function formatPostTime(timestamp: string) {
+    return formatDistanceToNow(parseISO(`${timestamp}Z`), { addSuffix: true }); // Append 'Z' to indicate UTC
   }
+
   return (
     <>
       <Container
@@ -126,78 +153,59 @@ const HomePage = () => {
           gap: "var(--size-l)",
         }}
       >
-        <FeedFilter categories={userCategories} setCategories={setUserCategories} />
-        {postList.map((post: Post, index: number) =>
-          post.user ? (
-            <Card key={`post-${index}`}>
-              <Box sx={{ display: "flex", gap: "var(--size)", alignItems: "center" }}>
-                {post ? (
-                  <Avatar {...stringAvatar(post.user ?? "")} />
-                ) : (
-                  <Skeleton variant="circular" />
-                )}
-                <Box sx={{ display: "flex", flexDirection: "column" }}>
-                  <Typography variant="h6">{post.user}</Typography>
-                  <Box sx={{ display: "flex" }}>
-                    <Typography>@{post.username}</Typography>{" "}
-                    <Box component="span" sx={{ mx: 1, opacity: 0.5 }}>
-                      •
-                    </Box>{" "}
-                    <Typography>{post.date}</Typography>
+        <FeedFilter categories={userCategories} setCategories={handleCategoriesChange} />
+        {getPostsQuery.isLoading
+          ? Array.from({ length: SKELETON_COUNT }).map((_, i) => <PostSkeleton key={i} />)
+          : sanitizedPosts.map((post: Post, index: number) => (
+              <Card key={`post-${index}`}>
+                <Box sx={{ display: "flex", gap: "var(--size)", alignItems: "center" }}>
+                  {post ? (
+                    <Avatar {...stringAvatar(post.user.full_name ?? "")} />
+                  ) : (
+                    <Skeleton variant="circular" />
+                  )}
+                  <Box sx={{ display: "flex", flexDirection: "column" }}>
+                    <Typography variant="h6">{post.user.full_name}</Typography>
+                    <Box sx={{ display: "flex" }}>
+                      <Typography>@{post.username}</Typography>{" "}
+                      <Box component="span" sx={{ mx: 1, opacity: 0.5 }}>
+                        •
+                      </Box>{" "}
+                      <Typography>{formatPostTime(post.publish_date)}</Typography>
+                    </Box>
                   </Box>
                 </Box>
-              </Box>
-              <Box dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(post.post ?? "") }} />
-              <Divider />
-              <Button
-                variant="text"
-                onClick={() => {
-                  setOpen(true);
-                  setPost(post);
-                }}
-                sx={{
-                  width: "fit-content",
-                  gap: "5px",
-                  alignItems: "flex-end",
-                  color: "var(--color-black)",
-                  ":hover": {
-                    background: "none",
-                    color: "var(--color-text-secondary)",
-                  },
-                }}
-              >
-                <ChatBubbleOutlineOutlinedIcon /> 23
-              </Button>
-            </Card>
-          ) : (
-            <Card key={`post-${index}`}>
-              <Box sx={{ display: "flex", gap: "var(--size)", alignItems: "center" }}>
-                <Skeleton variant="circular" width={40} height={40} />
-                <Box sx={{ display: "flex", flexDirection: "column" }}>
-                  <Skeleton variant="text" height={32} width={105} />
-                  <Box sx={{ display: "flex" }}>
-                    <Skeleton variant="text" height={24} width={60} />
-                    <Box component="span" sx={{ mx: 1, opacity: 0.5 }}>
-                      •
-                    </Box>{" "}
-                    <Skeleton variant="text" height={24} width={60} />
-                  </Box>
-                </Box>
-              </Box>
-              <Skeleton variant="rounded" height={200} />
-              <Divider />
-              <Skeleton variant="text" width={64} height={40} />
-            </Card>
-          ),
-        )}
+                <Box dangerouslySetInnerHTML={{ __html: post.safePost ?? "" }} />
+                <Divider />
+                <Button
+                  variant="text"
+                  onClick={() => {
+                    setOpen(true);
+                    setPost(post);
+                  }}
+                  sx={{
+                    width: "fit-content",
+                    gap: "5px",
+                    alignItems: "flex-end",
+                    color: "var(--color-black)",
+                    ":hover": {
+                      background: "none",
+                      color: "var(--color-text-secondary)",
+                    },
+                  }}
+                >
+                  <ChatBubbleOutlineOutlinedIcon /> {post.comments?.length}
+                </Button>
+              </Card>
+            ))}
       </Container>
       <ModalDialog handleClose={handleClose} open={open}>
         <Box sx={{ display: "flex", width: "100%", gap: "var(--size)" }}>
-          <Box dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(post?.post || "") }}></Box>
+          <Box dangerouslySetInnerHTML={{ __html: post?.safePost ?? "" }}></Box>
           <Box sx={{ flex: "1", display: "flex", flexDirection: "column", gap: "var(--size-xs)" }}>
             <PostTextField value={caption} onChange={setCaption} />
-            <Button variant="contained" onClick={handleSubmit}>
-              Send
+            <Button variant="contained" onClick={handleCommentSubmit}>
+              Post
             </Button>
           </Box>
         </Box>

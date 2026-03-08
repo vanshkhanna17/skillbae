@@ -6,7 +6,12 @@ import { Navigate } from "react-router-dom";
 import NavigationBar from "./nav/NavigationBar.tsx";
 
 const ProtectedRoute = ({ children }: { children: ReactNode }) => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) {
+    return null; // or a loading spinner if you prefer
+  }
+
   return isAuthenticated ? (
     <>
       <Container maxWidth={false} disableGutters>

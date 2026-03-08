@@ -1,6 +1,6 @@
-import { baseUrl, getHeaders, postRequests } from "./baseApi.ts";
+import { fetchWithRetry, postPutRequests } from "./baseApi.ts";
 
-interface PostCreate {
+export interface PostCreateInterface {
   content: string;
   category_id: number;
 }
@@ -11,53 +11,28 @@ interface CommentCreate {
 }
 
 export const getPosts = async () => {
-  const response = await fetch(`${baseUrl}/feed/posts`, {
-    method: "GET",
-    credentials: "include",
-    headers: {
-      ...getHeaders(true),
-    },
-  });
-  if (!response.ok) {
-    throw new Error("Failed to fetch user");
-  }
-  return await response.json();
+  return await fetchWithRetry("feed/posts");
 };
 
 export const getAllCategories = async () => {
-  const response = await fetch(`${baseUrl}/feed/categories`, {
-    method: "GET",
-    credentials: "include",
-    headers: {
-      ...getHeaders(true),
-    },
-  });
-  if (!response.ok) {
-    throw new Error("Failed to fetch user");
-  }
-  return await response.json();
+  return await fetchWithRetry("feed/categories");
 };
 
 export const getUserCategories = async () => {
-  const response = await fetch(`${baseUrl}/users/user-categories`, {
-    method: "GET",
-    credentials: "include",
-    headers: {
-      ...getHeaders(true),
-    },
-  });
-  if (!response.ok) {
-    throw new Error("Failed to fetch user");
-  }
-  return await response.json();
+  return await fetchWithRetry("users/user-categories");
 };
 
-export const createPost = async (data: PostCreate) => {
-  const response = await postRequests("/feed/posts", data, false, true);
+export const saveUserCategories = async (data: number[]) => {
+  const response = await postPutRequests("users/categories-update", data, true, true, true);
+  return response;
+};
+
+export const createPost = async (data: PostCreateInterface) => {
+  const response = await postPutRequests("feed/posts", data, true, true);
   return response;
 };
 
 export const createComment = async (data: CommentCreate) => {
-  const response = await postRequests("/feed/comment", data, false, true);
+  const response = await postPutRequests("feed/comment", data, true, true);
   return response;
 };
