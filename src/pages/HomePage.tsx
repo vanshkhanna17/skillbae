@@ -1,9 +1,10 @@
 import { getPosts, getUserCategories, saveUserCategories } from "@/api/feedApi.ts";
-import { getAccessToken } from "@/api/tokenStore.ts";
 import Card from "@/components/Card.tsx";
 import FeedFilter from "@/components/FeedFilter.tsx";
 import ModalDialog from "@/components/ModalDialog.tsx";
 import PostTextField from "@/components/formFields/PostTextField.tsx";
+import { useAuth } from "@/context/AuthProvider.tsx";
+import { stringAvatar } from "@/utils/avatarUtils.ts";
 import ChatBubbleOutlineOutlinedIcon from "@mui/icons-material/ChatBubbleOutlineOutlined";
 import { Avatar, Box, Button, Container, Divider, Skeleton, Typography } from "@mui/material";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -62,7 +63,7 @@ const HomePage = () => {
   const [post, setPost] = useState<Post>();
   const [caption, setCaption] = useState<string>("");
   const queryClient = useQueryClient();
-  const isAuthenticated = !!getAccessToken();
+  const { isAuthenticated } = useAuth();
 
   const handleClose = () => setOpen(false);
 
@@ -99,7 +100,7 @@ const HomePage = () => {
   const postList = useMemo(() => getPostsQuery.data, [getPostsQuery.data]);
 
   const sanitizedPosts = useMemo(() => {
-    return postList.map((p: Post) => ({
+    return postList?.map((p: Post) => ({
       ...p,
       safePost: DOMPurify.sanitize(p.content ?? ""),
     }));
@@ -107,35 +108,6 @@ const HomePage = () => {
 
   const handleCommentSubmit = () => {
     console.log("Saved HTML:", caption);
-  };
-
-  const stringToColor = (string: string) => {
-    let hash = 0;
-    let i;
-
-    for (i = 0; i < string.length; i += 1) {
-      hash = string.charCodeAt(i) + ((hash << 5) - hash);
-    }
-
-    let color = "#";
-
-    for (i = 0; i < 3; i += 1) {
-      const value = (hash >> (i * 8)) & 0xff;
-      color += `00${value.toString(16)}`.slice(-2);
-    }
-
-    return color;
-  };
-
-  const stringAvatar = (name: string) => {
-    const parts = name.split(" ");
-
-    return {
-      sx: {
-        bgcolor: stringToColor(name),
-      },
-      children: parts.length > 1 ? `${parts[0][0]}${parts[1][0]}` : parts[0][0],
-    };
   };
 
   function formatPostTime(timestamp: string) {

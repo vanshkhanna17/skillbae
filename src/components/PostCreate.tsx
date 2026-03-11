@@ -1,5 +1,4 @@
 import { createPost, getAllCategories, type PostCreateInterface } from "@/api/feedApi.ts";
-import { getAccessToken } from "@/api/tokenStore.ts";
 import { Button, FormControl, InputLabel, MenuItem, Select, Typography } from "@mui/material";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import React, { useMemo } from "react";
@@ -7,6 +6,7 @@ import { Controller, useForm } from "react-hook-form";
 import type { Category } from "./FeedFilter.tsx";
 import PostTextField from "./formFields/PostTextField.tsx";
 import ModalDialog from "./ModalDialog.tsx";
+import { useAuth } from "@/context/AuthProvider.tsx";
 
 interface PostCreateForm {
   category_id: string;
@@ -21,6 +21,7 @@ const PostCreate = ({
   setOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }) => {
   const queryClient = useQueryClient();
+  const { isAuthenticated } = useAuth();
   const {
     control,
     handleSubmit: handleFormSubmit,
@@ -47,7 +48,7 @@ const PostCreate = ({
   const getCategoriesQuery = useQuery({
     queryKey: ["feed", "categories"],
     queryFn: getAllCategories,
-    enabled: !!getAccessToken(),
+    enabled: !!isAuthenticated,
     retry: false,
   });
 

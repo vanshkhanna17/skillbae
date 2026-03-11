@@ -1,5 +1,4 @@
 import { getAllCategories } from "@/api/feedApi.ts";
-import { getAccessToken } from "@/api/tokenStore.ts";
 
 import CheckBoxIcon from "@mui/icons-material/CheckBox";
 import CheckBoxOutlineBlankIcon from "@mui/icons-material/CheckBoxOutlineBlank";
@@ -19,6 +18,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import Card from "./Card.tsx";
+import { useAuth } from "@/context/AuthProvider.tsx";
 interface FeedFilterProps {
   categories: number[];
   setCategories: (categories: number[]) => void;
@@ -31,11 +31,11 @@ export interface Category {
 
 const FeedFilter = ({ categories, setCategories }: FeedFilterProps) => {
   const [filterValues, setFilterValues] = useState<number[]>([]);
-
+  const { isAuthenticated } = useAuth();
   const getCategoriesQuery = useQuery({
     queryKey: ["feed", "categories"],
     queryFn: getAllCategories,
-    enabled: !!getAccessToken(),
+    enabled: !!isAuthenticated,
     retry: false,
   });
 

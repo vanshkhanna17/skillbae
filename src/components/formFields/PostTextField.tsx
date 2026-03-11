@@ -36,7 +36,7 @@ const PostTextField = ({ value, onChange, maxLength = 2200 }: PostTextFieldProps
 
   const characterCount = useMemo(() => {
     return editor?.getText().length ?? 0;
-  }, [editor?.getText()]);
+  }, [editor]);
 
   if (!editor) return null;
 
