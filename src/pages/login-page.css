@@ -1,0 +1,49 @@
+.landing-conatiner {
+  padding: 0px !important;
+}
+
+.text-content {
+  background: linear-gradient(
+    to bottom right,
+    oklch(54.6% 0.245 262.881),
+    var(--color-text-primary),
+    oklch(49.6% 0.265 301.924)
+  );
+  text-align: left;
+  padding: calc(var(--spacing) * 12);
+}
+
+.form-content {
+  padding: calc(var(--spacing) * 8);
+  max-width: var(--container-md);
+  text-align: center;
+  margin: auto;
+}
+
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-radius: var(--radius-2xl);
+  padding: 40px;
+  background-color: #ffff;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+.text-content {
+  color: white;
+  justify-content: space-between;
+}
+
+.bullets-container {
+  align-items: center;
+  gap: 20px !important;
+  margin-bottom: 24px;
+}
+
+.icon-container {
+  background-color: color-mix(in oklab, #fff 20%, transparent);
+  border-radius: calc(infinity * 1px);
+  padding: 20px;
+  display: flex;
+}
