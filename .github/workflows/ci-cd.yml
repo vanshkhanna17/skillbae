@@ -8,7 +8,7 @@ jobs:
   lint-and-build:
     runs-on: ubuntu-latest
     env:
-      VITE_API_BASE_URL: ${{ secrest.VITE_API_BASE_URL }}
+      VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
