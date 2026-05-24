@@ -1,23 +1,354 @@
-name: SkillBae Frontend CI CD
+name: SkillBae Deploy
+
+run-name: ${{ github.event_name == 'workflow_dispatch' && format('Deploy {0} → {1}', github.event.inputs.branch, github.event.inputs.environment) || github.event.head_commit.message }}
+
 on:
-  push:
-    branches: ["main", "staging"]
   pull_request:
     branches: ["main", "staging"]
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "Branch to deploy"
+        required: true
+        default: "staging"
+        type: choice
+        options:
+          - staging
+          - main
+      environment:
+        description: "Environment to deploy"
+        required: true
+        default: "staging"
+        type: choice
+        options:
+          - staging
+          - prod
+
+permissions:
+  id-token: write # required for OIDC
+  contents: read
+
+concurrency:
+  group: deploy-${{ github.event.inputs.environment || github.ref }}
+  cancel-in-progress: false
+
+env:
+  TERRAFORM_VERSION: "1.6.2"
+  NODE_VERSION: "24.x"
+  AWS_REGION: "ap-south-1"
+  TF_WORKING_DIR: "terraform"
+
+# ─────────────────────────────────────────────
+# JOB 1 — Validate branch/environment pairing
+# ─────────────────────────────────────────────
 jobs:
-  lint-and-build:
+  validate-inputs:
+    name: Validate Inputs
     runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    steps:
+      - name: Check branch/environment pairing
+        run: |
+          BRANCH="${{ github.event.inputs.branch }}"
+          ENV="${{ github.event.inputs.environment }}"
+
+          if [[ "$BRANCH" == "staging" && "$ENV" != "staging" ]]; then
+            echo "❌ Branch 'staging' can only deploy to 'staging', got '$ENV'"
+            exit 1
+          fi
+
+          if [[ "$BRANCH" == "main" && "$ENV" != "prod" ]]; then
+            echo "❌ Branch 'main' can only deploy to 'prod', got '$ENV'"
+            exit 1
+          fi
+
+          echo "✅ Valid pairing: $BRANCH → $ENV"
+
+  # ─────────────────────────────────────────────
+  # JOB 2 — Lint & Test (runs on PR and dispatch)
+  # ─────────────────────────────────────────────
+  lint-and-test:
+    name: Lint & Test
+    runs-on: ubuntu-latest
+    needs: [validate-inputs]
+    if: always() && (needs.validate-inputs.result == 'success' || needs.validate-inputs.result == 'skipped')
     env:
       VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - name: Checkout Code
+        uses: actions/checkout@v4
         with:
-          node-version: "24"
+          ref: ${{ github.event.inputs.branch || github.ref }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
           cache: "yarn"
+
       - name: Install dependencies
         run: yarn install --frozen-lockfile
+
       - name: Lint
         run: yarn lint
+
+  # ─────────────────────────────────────────────
+  # JOB 3 — Build frontend (dispatch only)
+  # ─────────────────────────────────────────────
+  build:
+    name: Build Frontend
+    runs-on: ubuntu-latest
+    needs: lint-and-test
+    if: github.event_name == 'workflow_dispatch'
+    environment: ${{ github.event.inputs.environment }}
+    env:
+      VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.branch }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "yarn"
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
       - name: Build
         run: yarn build
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-${{ github.event.inputs.environment }}-${{ github.run_id }}
+          path: dist/
+          retention-days: 1
+
+  # ─────────────────────────────────────────────
+  # JOB 4 — Terraform Plan (always runs on dispatch)
+  # ─────────────────────────────────────────────
+  tf-plan:
+    name: Terraform Plan
+    runs-on: ubuntu-latest
+    needs: lint-and-test
+    if: github.event_name == 'workflow_dispatch'
+    environment: ${{ github.event.inputs.environment }}
+
+    defaults:
+      run:
+        working-directory: ${{ env.TF_WORKING_DIR }}
+
+    outputs:
+      backend-config: ${{ steps.config.outputs.backend-config }}
+      var-file: ${{ steps.config.outputs.var-file }}
+      workspace: ${{ steps.config.outputs.workspace }}
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.branch }}
+
+      - name: Set deployment config
+        id: config
+        run: |
+          case "${{ github.event.inputs.environment }}" in
+            staging)
+              echo "backend-config=config.staging.tfbackend" >> $GITHUB_OUTPUT
+              echo "var-file=staging.tfvars" >> $GITHUB_OUTPUT
+              echo "workspace=staging" >> $GITHUB_OUTPUT
+              ;;
+            prod)
+              echo "backend-config=config.prod.tfbackend" >> $GITHUB_OUTPUT
+              echo "var-file=prod.tfvars" >> $GITHUB_OUTPUT
+              echo "workspace=prod" >> $GITHUB_OUTPUT
+              ;;
+            *)
+              echo "❌ Unknown environment: ${{ github.event.inputs.environment }}"
+              exit 1
+              ;;
+          esac
+          echo "✅ Config set for ${{ github.event.inputs.environment }}"
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_GITHUB_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          role-session-name: GitHubActions-plan-${{ github.run_id }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+          terraform_wrapper: false
+
+      - name: Terraform Init
+        run: |
+          terraform init \
+            -backend-config=${{ steps.config.outputs.backend-config }} \
+            -reconfigure
+          echo "✅ Terraform initialized"
+
+      - name: Select or create workspace
+        run: |
+          WORKSPACE="${{ steps.config.outputs.workspace }}"
+          if terraform workspace list | grep -q "^\s*\*\?\s*${WORKSPACE}$"; then
+            terraform workspace select "$WORKSPACE"
+          else
+            terraform workspace new "$WORKSPACE"
+          fi
+          echo "✅ Active workspace: $(terraform workspace show)"
+
+      - name: Terraform Format Check
+        run: terraform fmt -check
+
+      - name: Terraform Validate
+        run: terraform validate
+
+      - name: Terraform Plan
+        run: |
+          terraform plan \
+            -var-file=${{ steps.config.outputs.var-file }} \
+            -out=tfplan \
+            -lock-timeout=10m
+          echo "✅ Plan complete"
+
+      - name: Upload plan artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan-${{ github.event.inputs.environment }}-${{ github.run_id }}
+          path: ${{ env.TF_WORKING_DIR }}/tfplan
+          retention-days: 1
+
+  # ─────────────────────────────────────────────
+  # JOB 5 — Terraform Apply
+  # ─────────────────────────────────────────────
+  tf-apply:
+    name: Terraform Apply
+    runs-on: ubuntu-latest
+    needs: [tf-plan, build]
+    if: github.event_name == 'workflow_dispatch'
+    environment: ${{ github.event.inputs.environment }}
+    timeout-minutes: 30
+
+    defaults:
+      run:
+        working-directory: ${{ env.TF_WORKING_DIR }}
+
+    # Expose TF outputs so the deploy job can consume them directly
+    outputs:
+      web_bucket: ${{ steps.tf-outputs.outputs.web_bucket }}
+      cloudfront_distribution_id: ${{ steps.tf-outputs.outputs.cloudfront_distribution_id }}
+      cloudfront_url: ${{ steps.tf-outputs.outputs.cloudfront_url }}
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.branch }}
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_GITHUB_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          role-session-name: GitHubActions-apply-${{ github.run_id }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+          terraform_wrapper: false
+
+      - name: Terraform Init
+        run: |
+          terraform init \
+            -backend-config=${{ needs.tf-plan.outputs.backend-config }} \
+            -reconfigure
+
+      - name: Select workspace
+        run: terraform workspace select "${{ needs.tf-plan.outputs.workspace }}"
+
+      - name: Download plan artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: tfplan-${{ github.event.inputs.environment }}-${{ github.run_id }}
+          path: ${{ env.TF_WORKING_DIR }}
+
+      - name: Terraform Apply
+        run: |
+          terraform apply -auto-approve -lock-timeout=10m tfplan
+          echo "✅ Infrastructure deployed"
+
+      - name: Capture Terraform outputs
+        id: tf-outputs
+        run: |
+          echo "web_bucket=$(terraform output -raw web_bucket)" >> $GITHUB_OUTPUT
+          echo "cloudfront_distribution_id=$(terraform output -raw cloudfront_distribution_id)" >> $GITHUB_OUTPUT
+          echo "cloudfront_url=$(terraform output -raw cloudfront_url)" >> $GITHUB_OUTPUT
+          echo "✅ Outputs captured"
+
+  # ─────────────────────────────────────────────
+  # JOB 6 — Deploy frontend to S3 + invalidate CloudFront
+  # ─────────────────────────────────────────────
+  deploy:
+    name: Deploy to S3
+    runs-on: ubuntu-latest
+    needs: [build, tf-apply]
+    if: github.event_name == 'workflow_dispatch' && needs.build.result == 'success' && needs.tf-apply.result == 'success'
+    environment: ${{ github.event.inputs.environment }}
+
+    steps:
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: dist-${{ github.event.inputs.environment }}-${{ github.run_id }}
+          path: dist/
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_GITHUB_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          role-session-name: GitHubActions-deploy-${{ github.run_id }}
+
+      - name: Upload index.html (no-cache)
+        run: |
+          aws s3 cp dist/index.html s3://${{ needs.tf-apply.outputs.web_bucket }}/index.html \
+            --cache-control "no-cache, no-store, must-revalidate"
+          echo "✅ index.html uploaded"
+
+      - name: Upload hashed assets (long-cache)
+        run: |
+          aws s3 sync dist/ s3://${{ needs.tf-apply.outputs.web_bucket }} \
+            --delete \
+            --exclude "index.html" \
+            --cache-control "public, max-age=31536000, immutable"
+          echo "✅ Hashed assets uploaded"
+
+      - name: Invalidate CloudFront cache
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id ${{ needs.tf-apply.outputs.cloudfront_distribution_id }} \
+            --paths "/*"
+          echo "✅ CloudFront cache invalidated"
+
+      - name: Deployment Summary
+        run: |
+          echo "## 🚀 Deployment Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Key | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Environment | \`${{ github.event.inputs.environment }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Branch | \`${{ github.event.inputs.branch }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| S3 Bucket | \`${{ needs.tf-apply.outputs.web_bucket }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| CloudFront ID | \`${{ needs.tf-apply.outputs.cloudfront_distribution_id }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| CloudFront URL | \`${{ needs.tf-apply.outputs.cloudfront_url }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Run ID | \`${{ github.run_id }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ **Deployed at $(date -u '+%Y-%m-%d %H:%M:%S UTC')**" >> $GITHUB_STEP_SUMMARY
