@@ -1,6 +1,5 @@
 resource "aws_s3_bucket" "app_bucket" {
   bucket = "${module.label.namespace}-${module.label.environment}-${module.label.name}-bucket"
-  region = var.aws_region
 }
 
 resource "aws_s3_bucket_ownership_controls" "boa" {
