@@ -12,6 +12,20 @@ resource "aws_cloudfront_distribution" "app_cdn" {
     origin_id                = "origin-bucket-${aws_s3_bucket.app_bucket.id}"
     origin_access_control_id = aws_cloudfront_origin_access_control.app_cdn_control.id
   }
+
+  custom_error_response {
+    error_code            = 403
+    response_code         = 200
+    response_page_path    = "/index.html"
+    error_caching_min_ttl = 10
+  }
+
+  custom_error_response {
+    error_code            = 404
+    response_code         = 200
+    response_page_path    = "/index.html"
+    error_caching_min_ttl = 10
+  }
   default_cache_behavior {
     allowed_methods  = ["GET", "HEAD", "OPTIONS"]
     cached_methods   = ["GET", "HEAD", "OPTIONS"]
