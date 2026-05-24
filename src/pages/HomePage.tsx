@@ -1,12 +1,21 @@
-import { getPosts, getUserCategories, saveUserCategories } from "@/api/feedApi.ts";
+import { getPostComments, getPosts, getUserCategories, saveUserCategories } from "@/api/feedApi.ts";
 import Card from "@/components/Card.tsx";
 import FeedFilter from "@/components/FeedFilter.tsx";
 import ModalDialog from "@/components/ModalDialog.tsx";
-import PostTextField from "@/components/formFields/PostTextField.tsx";
 import { useAuth } from "@/context/AuthProvider.tsx";
 import { stringAvatar } from "@/utils/avatarUtils.ts";
+import { NearMeRounded } from "@mui/icons-material";
 import ChatBubbleOutlineOutlinedIcon from "@mui/icons-material/ChatBubbleOutlineOutlined";
-import { Avatar, Box, Button, Container, Divider, Skeleton, Typography } from "@mui/material";
+import {
+  Avatar,
+  Box,
+  Button,
+  Container,
+  Divider,
+  Skeleton,
+  TextField,
+  Typography,
+} from "@mui/material";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNow, parseISO } from "date-fns";
 import DOMPurify from "dompurify";
@@ -30,6 +39,7 @@ export interface Post {
   publish_date: string;
   category: { id: number; category: string };
   comments?: [];
+  id: number;
 }
 
 const SKELETON_COUNT = 4;
@@ -79,6 +89,12 @@ const HomePage = () => {
     enabled: isAuthenticated,
   });
 
+  const getCommentsQuery = useQuery({
+    queryKey: ["feed", "post", "comments", post?.id],
+    queryFn: () => getPostComments(post!.id),
+    enabled: isAuthenticated && !!post?.id,
+  });
+
   const saveUserCategoriesMutation = useMutation({
     mutationFn: (data: number[]) => saveUserCategories(data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["feed", "posts"] }),
@@ -111,7 +127,12 @@ const HomePage = () => {
   };
 
   function formatPostTime(timestamp: string) {
-    return formatDistanceToNow(parseISO(`${timestamp}Z`), { addSuffix: true }); // Append 'Z' to indicate UTC
+    if (!timestamp) return "";
+    try {
+      return formatDistanceToNow(parseISO(`${timestamp}Z`), { addSuffix: true });
+    } catch {
+      return "";
+    }
   }
 
   return (
@@ -172,13 +193,75 @@ const HomePage = () => {
             ))}
       </Container>
       <ModalDialog handleClose={handleClose} open={open}>
-        <Box sx={{ display: "flex", width: "100%", gap: "var(--size)" }}>
-          <Box dangerouslySetInnerHTML={{ __html: post?.safePost ?? "" }}></Box>
-          <Box sx={{ flex: "1", display: "flex", flexDirection: "column", gap: "var(--size-xs)" }}>
-            <PostTextField value={caption} onChange={setCaption} />
-            <Button variant="contained" onClick={handleCommentSubmit}>
-              Post
-            </Button>
+        <Box
+          sx={{
+            display: "flex",
+            padding: "0px",
+            width: "100%",
+            height: "60vh",
+          }}
+        >
+          <Box
+            sx={{
+              display: "flex",
+              flexDirection: "column",
+              flex: "1",
+              width: "100%",
+              gap: "var(--size)",
+              padding: "32px 0 32px 32px",
+            }}
+          >
+            <Box sx={{ display: "flex", gap: "var(--size)", alignItems: "center" }}>
+              {post ? (
+                <Avatar {...stringAvatar(post.user.full_name ?? "")} />
+              ) : (
+                <Skeleton variant="circular" />
+              )}
+              <Box sx={{ display: "flex", flexDirection: "column" }}>
+                <Typography sx={{ fontWeight: "bold" }}>{post?.user.full_name}</Typography>
+                <Box sx={{ display: "flex" }}>
+                  <Typography>@{post?.username}</Typography>{" "}
+                  <Box component="span" sx={{ mx: 1, opacity: 0.5 }}>
+                    •
+                  </Box>{" "}
+                  <Typography>{formatPostTime(post?.publish_date ?? "")}</Typography>
+                </Box>
+              </Box>
+            </Box>
+            <Box dangerouslySetInnerHTML={{ __html: post?.safePost ?? "" }}></Box>
+          </Box>
+          <Divider orientation="vertical" />
+          <Box
+            sx={{
+              flex: "1",
+              display: "flex",
+              flexDirection: "column",
+              paddingTop: "var(--size)",
+              paddingBottom: "var(--size)",
+            }}
+          >
+            <Box>Comments ({getCommentsQuery.data?.length})</Box>
+            <Box sx={{ flex: 1, background: "var(--color-gray-200)" }}></Box>
+            <TextField
+              value={caption}
+              onChange={(event) => setCaption(event.target.value)}
+              placeholder="Write a comment"
+              slotProps={{
+                input: {
+                  endAdornment: (
+                    <NearMeRounded
+                      onClick={handleCommentSubmit}
+                      sx={{
+                        width: "var(--size-xl) !important",
+                        padding: 0,
+                        color: "var(--color-primary)",
+                        cursor: "pointer",
+                      }}
+                    />
+                  ),
+                },
+              }}
+            />
           </Box>
         </Box>
       </ModalDialog>

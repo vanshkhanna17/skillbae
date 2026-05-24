@@ -22,6 +22,10 @@ export const getUserCategories = async () => {
   return await fetchWithRetry("users/user-categories");
 };
 
+export const getPostComments = async (post_id: number) => {
+  return await fetchWithRetry(`feed/post-comments/${post_id}`);
+};
+
 export const saveUserCategories = async (data: number[]) => {
   const response = await postPutRequests("users/categories-update", data, true, true, true);
   return response;
