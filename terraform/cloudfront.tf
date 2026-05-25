@@ -50,9 +50,15 @@ resource "aws_cloudfront_distribution" "app_cdn" {
   }
   tags = {
     Environment = module.label.environment
+    Name        = "${module.label.namespace}-${module.label.environment}-${module.label.name}-cdn"
   }
   viewer_certificate {
     cloudfront_default_certificate = true
   }
 }
 
+resource "aws_ssm_parameter" "frontend_cdn_domain" {
+  name  = "/skillbae/frontend/cloudfront_domain"
+  type  = "String"
+  value = aws_cloudfront_distribution.app_cdn.domain_name
+}
