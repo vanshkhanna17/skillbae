@@ -1,5 +1,5 @@
+import { clearAccessToken, setAccessToken } from "../lib/tokenStore.ts";
 import { fetchWithRetry, postPutRequests } from "./baseApi.ts";
-import { clearAccessToken, setAccessToken } from "./tokenStore.ts";
 
 export interface RegisterFormInterface {
   first_name: string;
@@ -11,24 +11,19 @@ export interface RegisterFormInterface {
 }
 
 export async function registerRequest(payload: RegisterFormInterface) {
-  const data = await postPutRequests("auth/register", payload, false, false);
+  const data = await postPutRequests("auth/register", payload);
   return data;
 }
 
 export async function loginRequest(username: string, password: string) {
-  const data = await postPutRequests(
-    "auth/login",
-    { email: username, password: password },
-    false,
-    true,
-  );
+  const data = await postPutRequests("auth/login", { email: username, password: password });
   setAccessToken(data?.access_token);
   return data;
 }
 
 export async function refreshTokenRequest() {
   try {
-    const data = await postPutRequests("auth/refresh", {}, false, true);
+    const data = await postPutRequests("auth/refresh", {});
     setAccessToken(data?.access_token);
     return data;
   } catch {
@@ -42,6 +37,6 @@ export async function getUser() {
 }
 
 export async function logoutRequest() {
-  await postPutRequests("auth/logout", undefined, true, true);
+  await postPutRequests("auth/logout", undefined);
   clearAccessToken();
 }

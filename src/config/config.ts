@@ -29,7 +29,7 @@ function required(name: keyof ImportMetaEnv): string {
 export const config = {
   // Required environment variable (throws error if missing)
   apiBaseUrl: required("VITE_API_BASE_URL"),
-
+  wsURL: required("VITE_API_WS_URL"),
   // Optional environment variables with defaults
   appName: env.VITE_APP_NAME ?? "SkillBae",
   environment: env.VITE_ENV ?? "development",

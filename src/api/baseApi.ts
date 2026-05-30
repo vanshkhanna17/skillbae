@@ -1,29 +1,24 @@
 import { config } from "@/config/config.ts";
 import { refreshTokenRequest } from "./authApi.ts";
-import { getAccessToken } from "./tokenStore.ts";
 
 export const baseUrl = config.apiBaseUrl;
 
-export const getHeaders = (authorization: boolean = false) => {
-  const authToken = authorization ? getAccessToken() : null;
+export const getHeaders = () => {
   return {
     "Content-Type": "application/json",
-    ...(authToken && { Authorization: `Bearer ${authToken}` }),
   };
 };
 
 export const postPutRequests = async (
   url: string,
   payload?: object,
-  authRequired: boolean = false,
-  cookiesRequired: boolean = false,
-  isPutRequest: boolean = false,
+  isPutRequest: "post" | "put" = "post",
 ) => {
   const requestOptions: RequestInit = {
-    method: isPutRequest ? "PUT" : "POST",
-    credentials: cookiesRequired ? "include" : "same-origin",
+    method: isPutRequest == "put" ? "PUT" : "POST",
+    credentials: "include",
     headers: {
-      ...getHeaders(authRequired),
+      ...getHeaders(),
     },
     body: payload ? JSON.stringify(payload) : undefined,
   };
@@ -31,13 +26,10 @@ export const postPutRequests = async (
   let response = await fetch(`${baseUrl}/${url}`, requestOptions);
 
   // If 401 and auth is required, try refreshing token and retry once
-  if (response.status === 401 && authRequired) {
+  if (response.status === 401) {
     try {
       await refreshTokenRequest();
       // Retry the request with new token
-      requestOptions.headers = {
-        ...getHeaders(authRequired),
-      };
       response = await fetch(`${baseUrl}/${url}`, requestOptions);
     } catch {
       throw new Error(`HTTP error! status: ${response.status}`);
@@ -56,7 +48,7 @@ export const fetchWithRetry = async (url: string) => {
     method: "GET",
     credentials: "include",
     headers: {
-      ...getHeaders(true),
+      ...getHeaders(),
     },
   });
 
@@ -67,7 +59,7 @@ export const fetchWithRetry = async (url: string) => {
         method: "GET",
         credentials: "include",
         headers: {
-          ...getHeaders(true),
+          ...getHeaders(),
         },
       });
     } catch {

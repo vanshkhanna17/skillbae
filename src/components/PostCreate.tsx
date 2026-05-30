@@ -1,12 +1,13 @@
 import { createPost, getAllCategories, type PostCreateInterface } from "@/api/feedApi.ts";
+import { useAuth } from "@/context/AuthProvider.tsx";
 import { Button, FormControl, InputLabel, MenuItem, Select, Typography } from "@mui/material";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import React, { useMemo } from "react";
+import React, { lazy, Suspense, useMemo } from "react";
 import { Controller, useForm } from "react-hook-form";
 import type { Category } from "./FeedFilter.tsx";
-import PostTextField from "./formFields/PostTextField.tsx";
 import ModalDialog from "./ModalDialog.tsx";
-import { useAuth } from "@/context/AuthProvider.tsx";
+
+const PostTextField = lazy(() => import("./formFields/PostTextField.tsx"));
 
 interface PostCreateForm {
   category_id: string;
@@ -92,7 +93,11 @@ const PostCreate = ({
         name="content"
         control={control}
         rules={{ required: "Post content is required" }}
-        render={({ field }) => <PostTextField value={field.value} onChange={field.onChange} />}
+        render={({ field }) => (
+          <Suspense fallback={<div>Loading editor...</div>}>
+            <PostTextField value={field.value} onChange={field.onChange} />
+          </Suspense>
+        )}
       />
       <Button variant="contained" onClick={handleFormSubmit(onSubmit)}>
         Post

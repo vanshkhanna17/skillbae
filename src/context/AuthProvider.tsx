@@ -1,5 +1,6 @@
 import { getUser, loginRequest, logoutRequest, refreshTokenRequest } from "@/api/authApi.ts";
-import { getAccessToken } from "@/api/tokenStore.ts";
+import { getAccessToken } from "@/lib/tokenStore";
+import { wsManager } from "@/lib/wsManager";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createContext, use, type ReactNode } from "react";
 
@@ -35,6 +36,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     mutationFn: ({ username, password }: { username: string; password: string }) =>
       loginRequest(username, password),
     onSuccess: () => {
+      wsManager.allowReconnect();
       queryClient.invalidateQueries({ queryKey: ["auth", "user"] });
     },
   });
@@ -42,6 +44,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const logoutMutation = useMutation({
     mutationFn: () => logoutRequest(),
     onSuccess: () => {
+      wsManager.blockReconnect();
       queryClient.resetQueries({ queryKey: ["auth"] });
       queryClient.removeQueries({ queryKey: ["auth", "user"] });
     },
@@ -63,6 +66,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   );
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = () => {
   const context = use(AuthContext);
   if (!context) throw new Error("userAuth must be used within AuthProvider");
