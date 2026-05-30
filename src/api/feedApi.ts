@@ -27,16 +27,16 @@ export const getPostComments = async (post_id: number) => {
 };
 
 export const saveUserCategories = async (data: number[]) => {
-  const response = await postPutRequests("users/categories-update", data, true, true, true);
+  const response = await postPutRequests("users/categories-update", data, "put");
   return response;
 };
 
 export const createPost = async (data: PostCreateInterface) => {
-  const response = await postPutRequests("feed/posts", data, true, true);
+  const response = await postPutRequests("feed/posts", data);
   return response;
 };
 
 export const createComment = async (data: CommentCreate) => {
-  const response = await postPutRequests("feed/comment", data, true, true);
+  const response = await postPutRequests("feed/comment", data);
   return response;
 };

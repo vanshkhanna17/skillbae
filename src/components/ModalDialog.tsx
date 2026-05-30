@@ -22,7 +22,7 @@ const style = {
   flexDirection: "column",
   gap: "var(--size-l)",
   borderRadius: "var(--size-xxs)",
-  padding: "0",
+  padding: "var(--size)",
 };
 
 const ModalDialog = ({ handleClose, open, children, sx }: ModalDialogProps) => {

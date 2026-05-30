@@ -1,3 +1,4 @@
+import Chats from "@/components/chats/Chats.tsx";
 import ProtectedRoute from "@/components/ProtectedRoute.tsx";
 import HomePage from "@/pages/HomePage.tsx";
 import LoginPage from "@/pages/LoginPage.tsx";
@@ -18,7 +19,7 @@ const AppRoutes = () => {
         path="/chats"
         element={
           <ProtectedRoute>
-            <p>Coming Soon</p>
+            <Chats />
           </ProtectedRoute>
         }
       />
