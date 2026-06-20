@@ -7,12 +7,15 @@ import FacebookSharpIcon from "@mui/icons-material/FacebookSharp";
 import GoogleIcon from "@mui/icons-material/Google";
 import { Box, Button, Divider, Grid, Typography } from "@mui/material";
 import { useMutation } from "@tanstack/react-query";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Link, Navigate, useNavigate } from "react-router-dom";
+import RHFUsernameField from "../formFields/RHFUsernameField";
 
 const RegisterForm = () => {
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const [registerError, setRegisterError] = useState<string | null>(null);
   const {
     control,
     handleSubmit,
@@ -37,12 +40,13 @@ const RegisterForm = () => {
     onSuccess: () => {
       navigate("/login", { state: { register: true }, replace: true });
     },
-    onError: (error) => {
-      console.error("Registration failed:", error);
+    onError: (error: Error) => {
+      setRegisterError(error.message ?? "Registration failed. Please try again.");
     },
   });
 
   const onSubmit = (data: RegisterSchemaType) => {
+    setRegisterError(null);
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { confirmPassword: _, ...payload } = data;
     registerMutation.mutateAsync(payload as RegisterFormInterface);
@@ -65,49 +69,63 @@ const RegisterForm = () => {
           <Typography variant="h5">Create Account</Typography>
           <Typography variant="subtitle1">Sign up to get started with SocialHub</Typography>
         </Grid>
-        <RHFTextField
-          name="first_name"
-          control={control}
-          label="First Name"
-          placeholder="John"
-          required
-        />
-        <RHFTextField
-          name="last_name"
-          control={control}
-          label="Last Name"
-          placeholder="Doe"
-          required
-        />
-        <RHFTextField
-          name="email"
-          control={control}
-          type="email"
-          label="Email"
-          placeholder="abc@xyz.com"
-          required
-        />
-        <RHFTextField name="password" control={control} type="password" label="Password" required />
-        <RHFTextField
-          name="confirmPassword"
-          control={control}
-          type="password"
-          label="Confirm Password"
-          required
-        />
-        <RHFTextField
-          name="profile"
-          control={control}
-          label="Profile"
-          placeholder="Wedding Photogropher"
-        />
-        <RHFTextField
-          name="experience"
-          control={control}
-          label="Experience (in years)"
-          type="number"
-          placeholder="5.5"
-        />
+        <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--size)" }}>
+          <RHFTextField
+            name="first_name"
+            control={control}
+            label="First Name"
+            placeholder="John"
+            required
+          />
+          <RHFTextField
+            name="last_name"
+            control={control}
+            label="Last Name"
+            placeholder="Doe"
+            required
+          />
+          <RHFUsernameField name="username" control={control} />
+          <RHFTextField
+            name="email"
+            control={control}
+            type="email"
+            label="Email"
+            placeholder="abc@xyz.com"
+            required
+          />
+          <RHFTextField
+            name="password"
+            control={control}
+            type="password"
+            label="Password"
+            required
+          />
+          <RHFTextField
+            name="confirmPassword"
+            control={control}
+            type="password"
+            label="Confirm Password"
+            required
+          />
+          <RHFTextField
+            name="profile"
+            control={control}
+            label="Profile"
+            placeholder="Wedding Photogropher"
+          />
+          <RHFTextField
+            name="experience"
+            control={control}
+            label="Experience (in years)"
+            type="number"
+            placeholder="5.5"
+          />
+        </Box>
+        {registerError && (
+          <Typography color="error" sx={{ mt: 1 }}>
+            {registerError}
+          </Typography>
+        )}
         <Button type="submit" variant="contained" disabled={isSubmitting}>
           Sing Up
         </Button>

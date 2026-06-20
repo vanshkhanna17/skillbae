@@ -1,9 +1,9 @@
-import { Box, Paper } from "@mui/material";
+import { Box, Paper, type SxProps } from "@mui/material";
 import type { ReactNode } from "react";
 
-const Card = ({ children, key }: { children: ReactNode; key?: string }) => {
+const Card = ({ children, key, sx }: { children: ReactNode; key?: string; sx?: SxProps }) => {
   return (
-    <Paper key={key} sx={{ borderRadius: "var(--size-xs)" }}>
+    <Paper key={key} sx={{ borderRadius: "var(--size-xs)", ...sx }}>
       <Box
         sx={{
           display: "flex",

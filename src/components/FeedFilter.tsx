@@ -1,5 +1,6 @@
 import { getAllCategories } from "@/api/feedApi.ts";
 
+import { useAuth } from "@/context/AuthProvider.tsx";
 import CheckBoxIcon from "@mui/icons-material/CheckBox";
 import CheckBoxOutlineBlankIcon from "@mui/icons-material/CheckBoxOutlineBlank";
 import FilterAltOutlinedIcon from "@mui/icons-material/FilterAltOutlined";
@@ -18,7 +19,6 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import Card from "./Card.tsx";
-import { useAuth } from "@/context/AuthProvider.tsx";
 interface FeedFilterProps {
   categories: number[];
   setCategories: (categories: number[]) => void;
@@ -74,37 +74,45 @@ const FeedFilter = ({ categories, setCategories }: FeedFilterProps) => {
 
   return (
     <Card>
-      <Box sx={{ display: "flex", alignItems: "center", gap: "var(--size-s)" }}>
-        <FilterAltOutlinedIcon fontSize="large" sx={{ color: "var(--color-gray-500)" }} />
-        <FormControl sx={{ minWidth: "calc(10 * var(--size-l))" }}>
-          <InputLabel>Categories</InputLabel>
-          <Select
-            multiple
-            value={filterValues}
-            label="Categories"
-            onChange={handleChange}
-            renderValue={(selected) => {
-              const selectedArray = selected as number[];
-              return selectedArray.length > 1
-                ? `${selectedArray.length} categories selected`
-                : `${selectedArray.length} category selected`;
-            }}
-          >
-            {categoriesList.map((category: Category) => {
-              const selected = filterValues?.includes(category.id);
-              const SelectionIcon = selected ? CheckBoxIcon : CheckBoxOutlineBlankIcon;
-              return (
-                <MenuItem key={category.id} value={category.id}>
-                  <SelectionIcon
-                    fontSize="small"
-                    style={{ marginRight: 8, padding: 9, boxSizing: "content-box" }}
-                  />
-                  <ListItemText primary={category.category} />
-                </MenuItem>
-              );
-            })}
-          </Select>
-        </FormControl>
+      <Box
+        sx={{
+          display: "flex",
+          gap: "var(--size-s)",
+          flexDirection: "column",
+        }}
+      >
+        <Box sx={{ display: "flex", alignItems: "center", gap: "var(--size-s)" }}>
+          <FilterAltOutlinedIcon fontSize="large" sx={{ color: "var(--color-gray-500)" }} />
+          <FormControl sx={{ minWidth: "calc(10 * var(--size-l))" }}>
+            <InputLabel>Categories</InputLabel>
+            <Select
+              multiple
+              value={filterValues}
+              label="Categories"
+              onChange={handleChange}
+              renderValue={(selected) => {
+                const selectedArray = selected as number[];
+                return selectedArray.length > 1
+                  ? `${selectedArray.length} categories selected`
+                  : `${selectedArray.length} category selected`;
+              }}
+            >
+              {categoriesList.map((category: Category) => {
+                const selected = filterValues?.includes(category.id);
+                const SelectionIcon = selected ? CheckBoxIcon : CheckBoxOutlineBlankIcon;
+                return (
+                  <MenuItem key={category.id} value={category.id}>
+                    <SelectionIcon
+                      fontSize="small"
+                      style={{ marginRight: 8, padding: 9, boxSizing: "content-box" }}
+                    />
+                    <ListItemText primary={category.category} />
+                  </MenuItem>
+                );
+              })}
+            </Select>
+          </FormControl>
+        </Box>
         {filtersUpdated && (
           <Button variant="outlined" onClick={handleFiltersSave}>
             Save
@@ -114,7 +122,13 @@ const FeedFilter = ({ categories, setCategories }: FeedFilterProps) => {
       {chipValues.length > 0 && (
         <>
           <Divider />
-          <Box sx={{ display: "flex", gap: "var(--size-s)", flexWrap: "wrap" }}>
+          <Box
+            sx={{
+              display: "grid",
+              gap: "var(--size-s)",
+              gridTemplateColumns: "repeat(2, auto)",
+            }}
+          >
             {chipValues.map((category: { id: number; category: string }) => (
               <Chip
                 key={category.id}
