@@ -26,6 +26,7 @@ export interface Post {
   user: {
     id: number;
     email: string;
+    username: string;
     first_name: string;
     last_name: string;
     created_at: string;
@@ -137,61 +138,81 @@ const HomePage = () => {
 
   return (
     <>
-      <Container
+      <Box
         sx={{
-          maxWidth: "var(--container-size) !important",
-          margin: "0 auto !important",
           display: "flex",
-          flexDirection: "column",
-          gap: "var(--size-l)",
+          alignItems: "flex-start",
+          padding: "var(--size)",
         }}
       >
-        <FeedFilter categories={userCategories} setCategories={handleCategoriesChange} />
-        {getPostsQuery.isLoading
-          ? Array.from({ length: SKELETON_COUNT }).map((_, i) => <PostSkeleton key={i} />)
-          : sanitizedPosts.map((post: Post, index: number) => (
-              <Card key={`post-${index}`}>
-                <Box sx={{ display: "flex", gap: "var(--size)", alignItems: "center" }}>
-                  {post ? (
-                    <Avatar {...stringAvatar(post.user.full_name ?? "")} />
-                  ) : (
-                    <Skeleton variant="circular" />
-                  )}
-                  <Box sx={{ display: "flex", flexDirection: "column" }}>
-                    <Typography variant="h6">{post.user.full_name}</Typography>
-                    <Box sx={{ display: "flex" }}>
-                      <Typography>@{post.username}</Typography>{" "}
-                      <Box component="span" sx={{ mx: 1, opacity: 0.5 }}>
-                        •
-                      </Box>{" "}
-                      <Typography>{formatPostTime(post.publish_date)}</Typography>
+        <Container
+          sx={{
+            maxWidth: "var(--container-size) !important",
+            margin: "0 auto !important",
+            display: "flex",
+            flexDirection: "column",
+            gap: "var(--size-l)",
+          }}
+        >
+          {getPostsQuery.isLoading
+            ? Array.from({ length: SKELETON_COUNT }).map((_, i) => <PostSkeleton key={i} />)
+            : sanitizedPosts.map((post: Post, index: number) => (
+                <Card key={`post-${index}`}>
+                  <Box sx={{ display: "flex", gap: "var(--size)", alignItems: "center" }}>
+                    {post ? (
+                      <Avatar {...stringAvatar(post.user.full_name ?? "")} />
+                    ) : (
+                      <Skeleton variant="circular" />
+                    )}
+                    <Box sx={{ display: "flex", flexDirection: "column" }}>
+                      <Typography variant="h6">{post.user.full_name}</Typography>
+                      <Box sx={{ display: "flex" }}>
+                        <Typography>@{post.user.username}</Typography>{" "}
+                        <Box component="span" sx={{ mx: 1, opacity: 0.5 }}>
+                          •
+                        </Box>{" "}
+                        <Typography>{formatPostTime(post.publish_date)}</Typography>
+                      </Box>
                     </Box>
                   </Box>
-                </Box>
-                <Box dangerouslySetInnerHTML={{ __html: post.safePost ?? "" }} />
-                <Divider />
-                <Button
-                  variant="text"
-                  onClick={() => {
-                    setOpen(true);
-                    setPost(post);
-                  }}
-                  sx={{
-                    width: "fit-content",
-                    gap: "5px",
-                    alignItems: "flex-end",
-                    color: "var(--color-black)",
-                    ":hover": {
-                      background: "none",
-                      color: "var(--color-text-secondary)",
-                    },
-                  }}
-                >
-                  <ChatBubbleOutlineOutlinedIcon /> {post.comments?.length}
-                </Button>
-              </Card>
-            ))}
-      </Container>
+                  <Box dangerouslySetInnerHTML={{ __html: post.safePost ?? "" }} />
+                  <Divider />
+                  <Button
+                    variant="text"
+                    onClick={() => {
+                      setOpen(true);
+                      setPost(post);
+                    }}
+                    sx={{
+                      width: "fit-content",
+                      gap: "5px",
+                      alignItems: "flex-end",
+                      color: "var(--color-black)",
+                      ":hover": {
+                        background: "none",
+                        color: "var(--color-text-secondary)",
+                      },
+                    }}
+                  >
+                    <ChatBubbleOutlineOutlinedIcon /> {post.comments?.length}
+                  </Button>
+                </Card>
+              ))}
+        </Container>
+        <Box
+          sx={{
+            position: "sticky",
+            top: 0,
+            height: "100vh",
+            flexShrink: 0,
+            maxWidth: "280px",
+            width: "100%",
+          }}
+        >
+          <FeedFilter categories={userCategories} setCategories={handleCategoriesChange} />
+        </Box>
+      </Box>
+
       <ModalDialog handleClose={handleClose} open={open}>
         <Box
           sx={{
@@ -220,7 +241,7 @@ const HomePage = () => {
               <Box sx={{ display: "flex", flexDirection: "column" }}>
                 <Typography sx={{ fontWeight: "bold" }}>{post?.user.full_name}</Typography>
                 <Box sx={{ display: "flex" }}>
-                  <Typography>@{post?.username}</Typography>{" "}
+                  <Typography>@{post?.user?.username}</Typography>{" "}
                   <Box component="span" sx={{ mx: 1, opacity: 0.5 }}>
                     •
                   </Box>{" "}

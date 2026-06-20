@@ -16,7 +16,18 @@ export async function registerRequest(payload: RegisterFormInterface) {
 }
 
 export async function loginRequest(username: string, password: string) {
-  const data = await postPutRequests("auth/login", { email: username, password: password });
+  const data = await postPutRequests(
+    "auth/login",
+    username.includes("@")
+      ? {
+          email: username,
+          password: password,
+        }
+      : {
+          password: password,
+          username: username,
+        },
+  );
   setAccessToken(data?.access_token);
   return data;
 }
