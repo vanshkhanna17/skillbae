@@ -34,7 +34,7 @@ export async function loginRequest(username: string, password: string) {
 
 export async function refreshTokenRequest() {
   try {
-    const data = await postPutRequests("auth/refresh", {});
+    const data = await postPutRequests("auth/refresh", {}, "post", true);
     setAccessToken(data?.access_token);
     return data;
   } catch {

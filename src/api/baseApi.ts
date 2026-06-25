@@ -3,6 +3,18 @@ import { refreshTokenRequest } from "./authApi.ts";
 
 export const baseUrl = config.apiBaseUrl;
 
+// Singleton refresh promise — prevents concurrent 401s from firing multiple refresh calls
+let refreshPromise: Promise<void> | null = null;
+
+async function refreshOnce(): Promise<void> {
+  if (!refreshPromise) {
+    refreshPromise = refreshTokenRequest().finally(() => {
+      refreshPromise = null;
+    });
+  }
+  return refreshPromise;
+}
+
 export const getHeaders = () => {
   return {
     "Content-Type": "application/json",
@@ -13,6 +25,7 @@ export const postPutRequests = async (
   url: string,
   payload?: object,
   isPutRequest: "post" | "put" = "post",
+  skipRefresh = false,
 ) => {
   const requestOptions: RequestInit = {
     method: isPutRequest == "put" ? "PUT" : "POST",
@@ -25,12 +38,10 @@ export const postPutRequests = async (
 
   let response = await fetch(`${baseUrl}/${url}`, requestOptions);
 
-  // If 401 and auth is required, try refreshing token and retry once
-  if (response.status === 401) {
+  if (response.status === 401 && !skipRefresh) {
     try {
-      await refreshTokenRequest();
-      // Retry the request with new token
-      response = await fetch(`${baseUrl}/${url}`, requestOptions);
+      await refreshOnce();
+      response = await fetch(`${baseUrl}/${url}`, { ...requestOptions, headers: getHeaders() });
     } catch {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
@@ -54,13 +65,11 @@ export const fetchWithRetry = async (url: string) => {
 
   if (response.status === 401) {
     try {
-      await refreshTokenRequest();
+      await refreshOnce();
       response = await fetch(`${baseUrl}/${url}`, {
         method: "GET",
         credentials: "include",
-        headers: {
-          ...getHeaders(),
-        },
+        headers: getHeaders(),
       });
     } catch {
       throw new Error("Failed to refresh token");
