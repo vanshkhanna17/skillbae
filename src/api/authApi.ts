@@ -10,6 +10,18 @@ export interface RegisterFormInterface {
   experience?: number;
 }
 
+export interface UserDetails {
+  id: number;
+  username: string;
+  full_name: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  profile?: string;
+  experience?: number;
+  avatar_url?: string;
+}
+
 export async function registerRequest(payload: RegisterFormInterface) {
   const data = await postPutRequests("auth/register", payload);
   return data;

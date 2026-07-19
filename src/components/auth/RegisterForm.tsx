@@ -3,9 +3,7 @@ import RHFTextField from "@/components/formFields/RHFTextField.tsx";
 import { useAuth } from "@/context/AuthProvider.tsx";
 import { registerSchema, type RegisterSchemaType } from "@/schemas/registerSchema.ts";
 import { zodResolver } from "@hookform/resolvers/zod";
-import FacebookSharpIcon from "@mui/icons-material/FacebookSharp";
-import GoogleIcon from "@mui/icons-material/Google";
-import { Box, Button, Divider, Grid, Typography } from "@mui/material";
+import { Box, Button, Grid, Typography } from "@mui/material";
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -135,7 +133,7 @@ const RegisterForm = () => {
             Sign In
           </Button>
         </p>
-        <Divider sx={{ margin: "10px 0px" }}>
+        {/* <Divider sx={{ margin: "10px 0px" }}>
           <Typography variant="body2">Or continue with</Typography>
         </Divider>
         <Grid container justifyContent="center" spacing={2}>
@@ -145,7 +143,7 @@ const RegisterForm = () => {
           <Button variant="outlined" sx={{ borderColor: "oklch(87.2% 0.01 258.338)" }}>
             <FacebookSharpIcon />
           </Button>
-        </Grid>
+        </Grid> */}
       </Box>
     </>
   );

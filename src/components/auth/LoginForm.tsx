@@ -4,9 +4,7 @@ import "@/pages/login-page.css";
 import { loginSchema, type LoginSchemaType } from "@/schemas/loginScema.ts";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { LockOutline, MailOutline } from "@mui/icons-material";
-import FacebookSharpIcon from "@mui/icons-material/FacebookSharp";
-import GoogleIcon from "@mui/icons-material/Google";
-import { Box, Button, Divider, Grid, InputAdornment, Typography } from "@mui/material";
+import { Box, Button, Grid, InputAdornment, Typography } from "@mui/material";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
@@ -105,7 +103,7 @@ const LoginForm = () => {
         </Button>
       </p>
       {loginError && <Typography color="error">{loginError}</Typography>}
-      <Divider sx={{ margin: "10px 0px" }}>
+      {/* <Divider sx={{ margin: "10px 0px" }}>
         <Typography variant="body2">Or continue with</Typography>
       </Divider>
       <Grid container justifyContent="center" spacing={2}>
@@ -115,7 +113,7 @@ const LoginForm = () => {
         <Button variant="outlined" sx={{ borderColor: "oklch(87.2% 0.01 258.338)" }}>
           <FacebookSharpIcon />
         </Button>
-      </Grid>
+      </Grid> */}
     </Box>
   );
 };

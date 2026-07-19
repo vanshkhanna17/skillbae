@@ -1,4 +1,10 @@
-import { getPostComments, getPosts, getUserCategories, saveUserCategories } from "@/api/feedApi.ts";
+import {
+  createComment,
+  getPostComments,
+  getPosts,
+  getUserCategories,
+  saveUserCategories,
+} from "@/api/feedApi.ts";
 import Card from "@/components/Card.tsx";
 import FeedFilter from "@/components/FeedFilter.tsx";
 import ModalDialog from "@/components/ModalDialog.tsx";
@@ -17,6 +23,13 @@ import {
   Typography,
 } from "@mui/material";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+
+interface Comment {
+  id: number;
+  comment_text: string;
+  publish_date: string;
+  user: Post["user"];
+}
 import { formatDistanceToNow, parseISO } from "date-fns";
 import DOMPurify from "dompurify";
 import { useEffect, useMemo, useState } from "react";
@@ -101,6 +114,15 @@ const HomePage = () => {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["feed", "posts"] }),
   });
 
+  const createCommentMutation = useMutation({
+    mutationFn: (text: string) => createComment({ comment_text: text, post_id: post!.id }),
+    onSuccess: () => {
+      setCaption("");
+      queryClient.invalidateQueries({ queryKey: ["feed", "post", "comments", post?.id] });
+      queryClient.invalidateQueries({ queryKey: ["feed", "posts"] });
+    },
+  });
+
   const handleCategoriesChange = (categories: number[]) => {
     if (JSON.stringify(categories) === JSON.stringify(userCategories)) return;
 
@@ -124,7 +146,9 @@ const HomePage = () => {
   }, [postList]);
 
   const handleCommentSubmit = () => {
-    console.log("Saved HTML:", caption);
+    const trimmed = caption.trim();
+    if (!trimmed || !post?.id) return;
+    createCommentMutation.mutate(trimmed);
   };
 
   function formatPostTime(timestamp: string) {
@@ -261,12 +285,51 @@ const HomePage = () => {
               paddingBottom: "var(--size)",
             }}
           >
-            <Box>Comments ({getCommentsQuery.data?.length})</Box>
-            <Box sx={{ flex: 1, background: "var(--color-gray-200)" }}></Box>
+            <Box sx={{ px: 2, pt: 1 }}>
+              Comments ({getCommentsQuery.data?.length ?? post?.comments?.length ?? 0})
+            </Box>
+            <Box
+              sx={{ flex: 1, overflowY: "auto", px: 2, py: 1, display: "flex", flexDirection: "column", gap: 1.5 }}
+            >
+              {getCommentsQuery.isLoading
+                ? Array(3)
+                    .fill(null)
+                    .map((_,  i) => (
+                      <Box key={`comment-skeleton-${i}`} sx={{ display: "flex", gap: 1 }}>
+                        <Skeleton variant="circular" width={32} height={32} />
+                        <Box sx={{ flex: 1 }}>
+                          <Skeleton width="40%" height={20} />
+                          <Skeleton width="80%" height={20} />
+                        </Box>
+                      </Box>
+                    ))
+                : getCommentsQuery.data?.map((c: Comment) => (
+                    <Box key={c.id} sx={{ display: "flex", gap: 1, alignItems: "flex-start" }}>
+                      <Avatar
+                        {...stringAvatar(c.user.full_name)}
+                        sx={{ width: 32, height: 32, fontSize: "0.75rem" }}
+                      />
+                      <Box>
+                        <Typography variant="subtitle2">{c.user.full_name}</Typography>
+                        <Typography variant="body2">{c.comment_text}</Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {formatPostTime(c.publish_date)}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  ))}
+            </Box>
             <TextField
               value={caption}
               onChange={(event) => setCaption(event.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleCommentSubmit();
+                }
+              }}
               placeholder="Write a comment"
+              sx={{ px: 2, pb: 1 }}
               slotProps={{
                 input: {
                   endAdornment: (

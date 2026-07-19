@@ -1,19 +1,20 @@
 import { config } from "@/config/config.ts";
 import { wsManager } from "@/lib/wsManager";
-import { useEffect } from "react";
+import { useCallback, useEffect } from "react";
 import useWebSocket from "react-use-websocket";
 
 const WS_URL = config.wsURL;
 
-type MessageHanlder = (data: unknown) => void;
+type MessageHanlder<T = object> = (data: T) => void;
 
 const listeners = new Map<string, Set<MessageHanlder>>();
+let lastDispatched: unknown = null; // add this
 
 const useWS = () => {
-  const { sendJsonMessage, lastJsonMessage, readyState } = useWebSocket(WS_URL, {
+  const { sendJsonMessage, lastMessage, readyState } = useWebSocket(WS_URL, {
     share: true,
     shouldReconnect: (_closeEvent) => {
-      if (_closeEvent.code === 4001){
+      if (_closeEvent.code === 4001) {
         wsManager.blockReconnect();
         window.location.href = "/login";
         return false;
@@ -25,29 +26,34 @@ const useWS = () => {
   });
 
   useEffect(() => {
-    if (!lastJsonMessage) return;
+    if (!lastMessage || lastMessage === lastDispatched) return;
+    lastDispatched = lastMessage;
+    try {
+      const { topic, payload } = JSON.parse(lastMessage.data) as { topic: string; payload: object };
+      const handlers = listeners.get(topic);
+      if (!handlers) return;
+      handlers.forEach((handler) => handler(payload));
+    } catch {
+      /* ignore */
+    }
+  }, [lastMessage]);
 
-    const { topic, payload } = lastJsonMessage as { topic: string; payload: unknown };
-    const handlers = listeners.get(topic);
-    if (!handlers) return;
+  const subscribe = useCallback(<T = object>(topic: string, handler: MessageHanlder<T>) => {
+    const wrappedHandler: MessageHanlder = (data) => handler(data as T);
 
-    handlers.forEach((handler) => handler(payload));
-  }, [lastJsonMessage]);
-
-  const subscribe = (topic: string, handler: MessageHanlder) => {
     if (!listeners.has(topic)) {
       listeners.set(topic, new Set());
     }
-    listeners.get(topic)!.add(handler);
+    listeners.get(topic)!.add(wrappedHandler);
 
     return () => {
       const set = listeners.get(topic);
       if (set) {
-        set.delete(handler);
+        set.delete(wrappedHandler);
         if (set.size === 0) listeners.delete(topic);
       }
     };
-  };
+  }, []);
 
   const publish = (topic: string, payload: unknown) => {
     sendJsonMessage({ topic, payload });

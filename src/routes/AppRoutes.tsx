@@ -1,5 +1,5 @@
-import Chats from "@/components/chats/Chats.tsx";
 import ProtectedRoute from "@/components/ProtectedRoute.tsx";
+import ChatsPage from "@/pages/ChatsPage";
 import HomePage from "@/pages/HomePage.tsx";
 import LoginPage from "@/pages/LoginPage.tsx";
 import { Route, Routes } from "react-router-dom";
@@ -19,7 +19,7 @@ const AppRoutes = () => {
         path="/chats"
         element={
           <ProtectedRoute>
-            <Chats />
+            <ChatsPage />
           </ProtectedRoute>
         }
       />

@@ -1,11 +1,17 @@
-import { getUser, loginRequest, logoutRequest, refreshTokenRequest } from "@/api/authApi.ts";
+import {
+  getUser,
+  loginRequest,
+  logoutRequest,
+  refreshTokenRequest,
+  type UserDetails,
+} from "@/api/authApi.ts";
 import { getAccessToken } from "@/lib/tokenStore";
 import { wsManager } from "@/lib/wsManager";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createContext, use, type ReactNode } from "react";
 
 type AuthContextType = {
-  user: object | null;
+  user: UserDetails | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (username: string, password: string) => Promise<void>;
