@@ -1,9 +1,22 @@
-import type { UserDetails } from "./authApi";
 import { fetchWithRetry, postPutRequests } from "./baseApi";
+
+export interface UserPublic {
+  id: number;
+  username: string;
+  first_name: string | null;
+  last_name: string | null;
+  full_name: string | null;
+  avatar_url: string | null;
+  profile: string | null;
+}
+
+export interface UserSearchResult {
+  items: UserPublic[];
+}
 
 export interface ConversationListItem {
   conversation_id: string;
-  other_user: UserDetails;
+  other_user: UserPublic;
   unread_count: number;
   last_message?: string;
   last_message_at?: string;
@@ -50,4 +63,14 @@ export const markConversationRead = async (
 
 export const sendMessage = async (conversation_id: string, content: string) => {
   await postPutRequests(`conversations/${conversation_id}/message`, { content });
+};
+
+export const searchUsers = async (q: string, limit: number = 10): Promise<UserSearchResult> => {
+  return await fetchWithRetry(`users/search?q=${encodeURIComponent(q)}&limit=${limit}`);
+};
+
+export const createConversation = async (
+  targetUserId: number,
+): Promise<{ conversation_id: string; created: boolean }> => {
+  return await postPutRequests("conversations/create", { target_user_id: targetUserId });
 };

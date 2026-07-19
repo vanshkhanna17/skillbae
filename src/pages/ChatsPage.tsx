@@ -1,4 +1,4 @@
-import type { UserDetails } from "@/api/authApi";
+import type { UserPublic } from "@/api/chatApi";
 import Chat from "@/components/chats/Chat";
 import ChatList from "@/components/chats/ChatList";
 import { Container } from "@mui/material";
@@ -6,7 +6,7 @@ import { useState } from "react";
 
 export default function ChatsPage() {
   const [activeConversation, setActiveConversation] = useState("");
-  const [otherMember, setOtherMember] = useState<UserDetails | undefined>();
+  const [otherMember, setOtherMember] = useState<UserPublic | undefined>();
   return (
     <Container
       sx={{

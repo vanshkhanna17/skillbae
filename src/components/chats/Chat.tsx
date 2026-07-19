@@ -1,9 +1,9 @@
-import type { UserDetails } from "@/api/authApi";
 import {
   getConversationMessages,
   markConversationRead,
   sendMessage,
   type Message,
+  type UserPublic,
 } from "@/api/chatApi";
 import { useAuth } from "@/context/AuthProvider";
 import useWS from "@/hooks/useWS";
@@ -17,7 +17,7 @@ function formatTime(dateString: Date | string): string {
   return new Date(dateString).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
-const MessageBubbles = ({ msg, otherMember }: { msg: Message; otherMember: UserDetails }) => {
+const MessageBubbles = ({ msg, otherMember }: { msg: Message; otherMember: UserPublic }) => {
   const isSent = msg.sender_id !== otherMember.id;
   const [showTime, setShowTime] = useState(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -107,7 +107,7 @@ const Chat = ({
   otherMember,
 }: {
   activeConversation: string;
-  otherMember: UserDetails | undefined;
+  otherMember: UserPublic | undefined;
 }) => {
   const { isAuthenticated } = useAuth();
   const { subscribe } = useWS();
@@ -168,11 +168,13 @@ const Chat = ({
               flex: "0 0 auto",
             }}
           >
-            <Avatar {...stringAvatar(otherMember.full_name)} />
+            <Avatar {...stringAvatar(otherMember.full_name ?? otherMember.username)} />
             <Box sx={{ display: "flex", flexDirection: "column", alignItems: "flex-start" }}>
               {
                 <>
-                  <Typography variant="h6">{otherMember.full_name}</Typography>
+                  <Typography variant="h6">
+                    {otherMember.full_name ?? otherMember.username}
+                  </Typography>
                   <Typography>@{otherMember.username}</Typography>
                 </>
               }

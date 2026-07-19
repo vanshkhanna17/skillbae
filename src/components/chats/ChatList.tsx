@@ -1,8 +1,15 @@
-import type { UserDetails } from "@/api/authApi";
-import { getConversations, type ConversationListItem } from "@/api/chatApi";
+import {
+  createConversation,
+  getConversations,
+  searchUsers,
+  type ConversationListItem,
+  type UserPublic,
+} from "@/api/chatApi";
 import { useAuth } from "@/context/AuthProvider";
+import { useDebounce } from "@/hooks/useDebounce";
 import useWS from "@/hooks/useWS";
 import { stringAvatar } from "@/utils/avatarUtils";
+import { CloseRounded } from "@mui/icons-material";
 import {
   Avatar,
   Badge,
@@ -16,15 +23,16 @@ import {
   ListItemButton,
   ListItemText,
   Skeleton,
+  TextField,
   Typography,
 } from "@mui/material";
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 
 interface ChatListProps {
   activeConversation: string;
   setActiveConversation: (conversationId: string) => void;
-  setOtherMember: (member: UserDetails) => void;
+  setOtherMember: (member: UserPublic) => void;
 }
 
 const byRecent = (a: ConversationListItem, b: ConversationListItem) =>
@@ -36,12 +44,46 @@ const ChatList = ({ activeConversation, setActiveConversation, setOtherMember }:
   const [listCursor, setListCursor] = useState("");
   const [onlineUsers, setOnlineUsers] = useState<Map<string, boolean>>(new Map());
   const [conversations, setConversations] = useState<ConversationListItem[]>([]);
+  const [search, setSearch] = useState("");
+  const debouncedSearch = useDebounce(search, 300);
+  const searchActive = search.trim().length >= 3;
 
   const conversationsQuery = useQuery({
     queryKey: ["conversations", "list", listCursor],
     placeholderData: keepPreviousData,
     queryFn: async () => await getConversations(listCursor),
     enabled: isAuthenticated,
+  });
+
+  const userSearchQuery = useQuery({
+    queryKey: ["users", "search", debouncedSearch],
+    queryFn: async () => await searchUsers(debouncedSearch),
+    enabled: isAuthenticated && debouncedSearch.trim().length >= 3,
+  });
+
+  const startConversation = useMutation({
+    mutationFn: async (target: UserPublic) => await createConversation(target.id),
+    onSuccess: (data, target) => {
+      setActiveConversation(data.conversation_id);
+      setOtherMember(target);
+      setSearch("");
+      setConversations((prev) => {
+        if (prev.some((c) => c.conversation_id === data.conversation_id)) {
+          return prev.map((c) =>
+            c.conversation_id === data.conversation_id ? { ...c, unread_count: 0 } : c,
+          );
+        }
+        return [
+          {
+            conversation_id: data.conversation_id,
+            other_user: target,
+            unread_count: 0,
+            last_message_at: new Date().toISOString(),
+          },
+          ...prev,
+        ];
+      });
+    },
   });
 
   const handleSelect = (conv: ConversationListItem) => {
@@ -128,66 +170,109 @@ const ChatList = ({ activeConversation, setActiveConversation, setOtherMember }:
         <Typography variant="h6" align="left">
           Messages
         </Typography>
+        <TextField
+          size="small"
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          placeholder="Search users..."
+          sx={{ mt: 1 }}
+          slotProps={{
+            input: {
+              endAdornment: search ? (
+                <CloseRounded
+                  onClick={() => setSearch("")}
+                  sx={{ color: "var(--color-gray-500)", cursor: "pointer" }}
+                />
+              ) : undefined,
+            },
+          }}
+        />
       </Box>
       <List disablePadding sx={{ flex: 1, overflowY: "auto" }}>
-        {conversationsQuery.isLoading
-          ? Array(5)
-              .fill(null)
-              .map((_, i) => (
-                <ListItem key={i}>
+        {searchActive ? (
+          userSearchQuery.data?.items.length === 0 ? (
+            <Typography
+              variant="subtitle2"
+              sx={{ padding: "var(--size)", color: "var(--color-gray-500)" }}
+            >
+              No users found
+            </Typography>
+          ) : (
+            (userSearchQuery.data?.items ?? []).map((u, i) => (
+              <Box key={u.id}>
+                <ListItemButton onClick={() => startConversation.mutate(u)}>
                   <ListItemAvatar>
-                    <Skeleton variant="circular" width={40} height={40} />
+                    <Avatar {...stringAvatar(u.full_name ?? u.username)} />
                   </ListItemAvatar>
                   <ListItemText
-                    primary={<Skeleton width="55%" />}
-                    secondary={<Skeleton width="80%" />}
-                  />
-                </ListItem>
-              ))
-          : conversations.map((conv, i) => (
-              <Box key={conv.conversation_id}>
-                <ListItemButton
-                  selected={conv.conversation_id === activeConversation}
-                  onClick={() => handleSelect(conv)}
-                >
-                  <ListItemAvatar>
-                    <Badge
-                      overlap="circular"
-                      variant="dot"
-                      anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-                      sx={{
-                        "& .MuiBadge-dot": {
-                          bgcolor: onlineUsers.get(String(conv.other_user.id))
-                            ? "#3DD68C"
-                            : "#9E9E9E",
-                          boxShadow: "0 0 0 2px #fff",
-                        },
-                      }}
-                    >
-                      <Avatar {...stringAvatar(conv.other_user.full_name)} />
-                    </Badge>
-                  </ListItemAvatar>
-                  <ListItemText
-                    primary={conv.other_user.full_name}
-                    secondary={
-                      (conv.last_message?.length ?? 0) > 53
-                        ? conv.last_message!.substring(0, 53) + "..."
-                        : conv.last_message
-                    }
+                    primary={u.full_name ?? u.username}
+                    secondary={`@${u.username}`}
                     primaryTypographyProps={{ variant: "subtitle1", noWrap: true }}
                     secondaryTypographyProps={{ variant: "subtitle2", noWrap: true }}
                   />
-                  {conv.unread_count > 0 && (
-                    <Badge
-                      badgeContent={conv.unread_count}
-                      color="primary"
-                      sx={{ ml: 1, mr: 0.5 }}
-                    />
-                  )}
                 </ListItemButton>
-                {i < conversations.length - 1 && <Divider />}
+                {i < (userSearchQuery.data?.items.length ?? 0) - 1 && <Divider />}
               </Box>
-            ))}
+            ))
+          )
+        ) : conversationsQuery.isLoading ? (
+          Array(5)
+            .fill(null)
+            .map((_, i) => (
+              <ListItem key={i}>
+                <ListItemAvatar>
+                  <Skeleton variant="circular" width={40} height={40} />
+                </ListItemAvatar>
+                <ListItemText
+                  primary={<Skeleton width="55%" />}
+                  secondary={<Skeleton width="80%" />}
+                />
+              </ListItem>
+            ))
+        ) : (
+          conversations.map((conv, i) => (
+            <Box key={conv.conversation_id}>
+              <ListItemButton
+                selected={conv.conversation_id === activeConversation}
+                onClick={() => handleSelect(conv)}
+              >
+                <ListItemAvatar>
+                  <Badge
+                    overlap="circular"
+                    variant="dot"
+                    anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+                    sx={{
+                      "& .MuiBadge-dot": {
+                        bgcolor: onlineUsers.get(String(conv.other_user.id))
+                          ? "#3DD68C"
+                          : "#9E9E9E",
+                        boxShadow: "0 0 0 2px #fff",
+                      },
+                    }}
+                  >
+                    <Avatar
+                      {...stringAvatar(conv.other_user.full_name ?? conv.other_user.username)}
+                    />
+                  </Badge>
+                </ListItemAvatar>
+                <ListItemText
+                  primary={conv.other_user.full_name ?? conv.other_user.username}
+                  secondary={
+                    (conv.last_message?.length ?? 0) > 53
+                      ? conv.last_message!.substring(0, 53) + "..."
+                      : conv.last_message
+                  }
+                  primaryTypographyProps={{ variant: "subtitle1", noWrap: true }}
+                  secondaryTypographyProps={{ variant: "subtitle2", noWrap: true }}
+                />
+                {conv.unread_count > 0 && (
+                  <Badge badgeContent={conv.unread_count} color="primary" sx={{ ml: 1, mr: 0.5 }} />
+                )}
+              </ListItemButton>
+              {i < conversations.length - 1 && <Divider />}
+            </Box>
+          ))
+        )}
       </List>
 
       {conversationsQuery.data?.next_cursor && (
